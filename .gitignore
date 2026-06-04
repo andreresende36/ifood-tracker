@@ -1,0 +1,17 @@
+# ── Sessões do Chrome (NÃO subir — contêm cookies/senhas/tokens de login) ──────
+chrome_profile/
+profiles/
+
+# ── Python ─────────────────────────────────────────────────────────────────────
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# ── Ferramentas ────────────────────────────────────────────────────────────────
+.claude/
+
+# ── Bancos de dados: MANTIDOS no repo (data/*.db) ──────────────────────────────
+# data/ é versionado de propósito p/ guardar o histórico de pedidos.
+# Mas ignora artefatos voláteis dentro dele:
+data/*.log
