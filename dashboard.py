@@ -9,6 +9,7 @@ import os
 import subprocess
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -830,6 +831,58 @@ def run_scraper(profile: str):
     st.rerun()
 
 
+def scrape_status(profile: str) -> dict | None:
+    """
+    Lê o log da última coleta do perfil. Devolve None se nunca coletou.
+    'state' é ok, login (sessão expirada), erro ou velho (passou da rotina diária).
+    """
+    log_path = Path(f"data/scrape_{profile}.log")
+    if not log_path.exists():
+        return None
+
+    text = _read_log(log_path)
+    when = datetime.fromtimestamp(log_path.stat().st_mtime)
+    horas = (datetime.now() - when).total_seconds() / 3600
+
+    if "FIM_SCRAPER_OK" not in text:
+        # O scraper loga isso enquanto espera login/captcha que ninguém resolveu
+        expirou = "captcha/login" in text or "login" in text.lower()
+        state = "login" if expirou else "erro"
+    elif horas > 36:  # a rotina roda todo dia 00:00 — 36h significa que falhou
+        state = "velho"
+    else:
+        state = "ok"
+
+    return {"state": state, "when": when, "horas": horas}
+
+
+def render_scrape_alerts(profiles: list[str]) -> None:
+    """Avisa na sidebar quando a última coleta de algum perfil não foi bem."""
+    for profile in profiles:
+        info = scrape_status(profile)
+        if info is None or info["state"] == "ok":
+            continue
+        nome = profile_display_name(profile)
+        quando = info["when"].strftime("%d/%m às %H:%M")
+        if info["state"] == "login":
+            st.sidebar.error(
+                f"**{nome}** — sessão do iFood expirou em {quando}. "
+                "Clique em coletar e faça login pela janela do Chrome (VNC).",
+                icon="🔑",
+            )
+        elif info["state"] == "velho":
+            st.sidebar.warning(
+                f"**{nome}** — última coleta em {quando} "
+                f"({info['horas'] / 24:.0f}d atrás). A rotina diária não rodou.",
+                icon="🕐",
+            )
+        else:
+            st.sidebar.warning(
+                f"**{nome}** — a coleta de {quando} terminou com erro.",
+                icon="⚠️",
+            )
+
+
 def _read_log(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8", errors="ignore")
@@ -914,6 +967,9 @@ def main():
         format_func=profile_display_name,
         help="Cada perfil é uma pessoa, com banco de dados separado.",
     )
+
+    # Avisos de coleta falha — de TODOS os perfis, não só o selecionado
+    render_scrape_alerts(profiles)
 
     # No deploy em container, o Chrome roda num display virtual acessível por noVNC.
     # Precisa vir ANTES do botão de coletar: run_scraper() bloqueia o script, e o
