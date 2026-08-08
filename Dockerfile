@@ -12,6 +12,7 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates curl gnupg apache2-utils gettext-base tzdata \
         xvfb x11vnc novnc websockify supervisor nginx \
+        openbox x11-xserver-utils \
         fonts-liberation libnss3 libxss1 libasound2 libatk-bridge2.0-0 \
         libgtk-3-0 libgbm1 libdrm2 xdg-utils \
     && curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \

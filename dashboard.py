@@ -26,6 +26,9 @@ from database import (
 
 # Rodando no container do deploy: Chrome fica num display virtual (Xvfb + noVNC)
 IN_CONTAINER = os.environ.get("DISPLAY", "").startswith(":99")
+if IN_CONTAINER:
+    sys.path.insert(0, str(Path(__file__).parent / "deploy"))
+    import vnc_chrome
 
 # ── Page config ───────────────────────────────────────────────────────────────
 
@@ -1032,6 +1035,27 @@ def main():
             help="Use para fazer login no iFood ou resolver captcha quando a "
                  "sessão expirar.",
         )
+
+        # Fora de uma coleta não há Chrome no display — o VNC fica vazio.
+        # Este par de botões abre um navegador só para o login manual.
+        if vnc_chrome.is_running(sel_profile):
+            st.sidebar.success(
+                f"Chrome aberto para **{profile_display_name(sel_profile)}**. "
+                "Logue pelo VNC e depois feche.",
+                icon="🔑",
+            )
+            if st.sidebar.button("✅ Terminei o login — fechar Chrome",
+                                 use_container_width=True):
+                vnc_chrome.stop(sel_profile)
+                st.rerun()
+        elif st.sidebar.button(
+            "🔑 Abrir Chrome para login",
+            use_container_width=True,
+            help="Abre o iFood no display virtual para você logar sem pressa. "
+                 "Feche antes de coletar.",
+        ):
+            vnc_chrome.start(sel_profile)
+            st.rerun()
 
     # Botão de coletar/atualizar pedidos deste perfil (roda o scraper)
     if st.sidebar.button(
