@@ -4,7 +4,8 @@ FROM --platform=linux/amd64 python:3.12-slim-bookworm
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     DEBIAN_FRONTEND=noninteractive \
-    DISPLAY=:99
+    DISPLAY=:99 \
+    CHROME_EXTRA_ARGS="--no-sandbox --disable-dev-shm-usage --disable-gpu"
 
 # Chrome real (necessário para passar no Cloudflare do iFood) + Xvfb/VNC/noVNC
 RUN apt-get update && apt-get install -y --no-install-recommends \
