@@ -7,6 +7,8 @@ events { worker_connections 512; }
 
 http {
     include       /etc/nginx/mime.types;
+    # O bucket padrão (64) não comporta o token do VNC no map abaixo
+    map_hash_bucket_size 128;
     access_log    off;
     sendfile      on;
 
