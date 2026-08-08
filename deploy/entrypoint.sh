@@ -34,6 +34,13 @@ if [ -n "${APP_EXTRA_USERS:-}" ]; then
     done
 fi
 
-envsubst '${PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+# Token do socket do VNC — o dashboard lê a mesma variável para montar o link
+if [ -z "${VNC_TOKEN:-}" ]; then
+    VNC_TOKEN=$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')
+    echo "VNC_TOKEN não definido; gerando um efêmero para este deploy."
+fi
+export VNC_TOKEN
+
+envsubst '${PORT} ${VNC_TOKEN}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
 exec supervisord -c /etc/supervisor/supervisord.conf

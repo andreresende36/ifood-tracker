@@ -11,6 +11,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote
 
 import pandas as pd
 import plotly.express as px
@@ -1019,9 +1020,13 @@ def main():
     # Precisa vir ANTES do botão de coletar: run_scraper() bloqueia o script, e o
     # link é justamente o que o usuário precisa enquanto a coleta está rodando.
     if IN_CONTAINER:
+        # O token vai no path do noVNC porque o navegador não manda basic auth
+        # no handshake do WebSocket — quem valida é o nginx.
+        ws_path = quote(f"websockify?token={os.environ.get('VNC_TOKEN', '')}",
+                        safe="")
         st.sidebar.link_button(
             "🖥️ Abrir janela do Chrome (VNC)",
-            "/vnc/vnc.html?path=websockify&autoconnect=1&resize=remote",
+            f"/vnc/vnc.html?path={ws_path}&autoconnect=1&resize=remote",
             use_container_width=True,
             help="Use para fazer login no iFood ou resolver captcha quando a "
                  "sessão expirar.",
