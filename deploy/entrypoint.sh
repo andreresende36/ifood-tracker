@@ -17,6 +17,12 @@ for d in chrome_profile profiles; do
 done
 chown -h app:app /app/chrome_profile /app/profiles
 
+# O Chrome tranca o perfil com SingletonLock/Cookie/Socket, gravados no volume.
+# Se o container morreu com ele aberto (todo redeploy faz isso), o lock aponta
+# para um host que não existe mais e o Chrome seguinte se recusa a subir. No
+# boot não há Chrome rodando, então qualquer lock aqui é resto.
+find "$DATA_DIR" -maxdepth 3 -name "Singleton*" -print -delete 2>/dev/null || true
+
 # Gate de senha (nginx basic auth) — protege dashboard e VNC
 if [ -z "${APP_USER:-}" ] || [ -z "${APP_PASSWORD:-}" ]; then
     echo "FATAL: defina APP_USER e APP_PASSWORD nas variáveis do Railway." >&2
