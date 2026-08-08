@@ -1020,9 +1020,10 @@ def main():
     # Precisa vir ANTES do botão de coletar: run_scraper() bloqueia o script, e o
     # link é justamente o que o usuário precisa enquanto a coleta está rodando.
     if IN_CONTAINER:
-        # O token vai no path do noVNC porque o navegador não manda basic auth
-        # no handshake do WebSocket — quem valida é o nginx.
-        ws_path = quote(f"websockify?token={os.environ.get('VNC_TOKEN', '')}",
+        # O noVNC monta a URL do socket a partir da raiz ('wss://host/' + path),
+        # não relativa a /vnc/ — daí o prefixo explícito. O token vai junto
+        # porque o navegador não manda basic auth no handshake do WebSocket.
+        ws_path = quote(f"vnc/websockify?token={os.environ.get('VNC_TOKEN', '')}",
                         safe="")
         st.sidebar.link_button(
             "🖥️ Abrir janela do Chrome (VNC)",
