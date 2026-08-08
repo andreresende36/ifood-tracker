@@ -5,11 +5,12 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     DEBIAN_FRONTEND=noninteractive \
     DISPLAY=:99 \
+    TZ=America/Sao_Paulo \
     CHROME_EXTRA_ARGS="--no-sandbox --disable-dev-shm-usage --disable-gpu"
 
 # Chrome real (necessário para passar no Cloudflare do iFood) + Xvfb/VNC/noVNC
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl gnupg apache2-utils gettext-base \
+        ca-certificates curl gnupg apache2-utils gettext-base tzdata \
         xvfb x11vnc novnc websockify supervisor nginx \
         fonts-liberation libnss3 libxss1 libasound2 libatk-bridge2.0-0 \
         libgtk-3-0 libgbm1 libdrm2 xdg-utils \

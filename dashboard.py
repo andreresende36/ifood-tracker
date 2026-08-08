@@ -915,6 +915,18 @@ def main():
         help="Cada perfil é uma pessoa, com banco de dados separado.",
     )
 
+    # No deploy em container, o Chrome roda num display virtual acessível por noVNC.
+    # Precisa vir ANTES do botão de coletar: run_scraper() bloqueia o script, e o
+    # link é justamente o que o usuário precisa enquanto a coleta está rodando.
+    if IN_CONTAINER:
+        st.sidebar.link_button(
+            "🖥️ Abrir janela do Chrome (VNC)",
+            "/vnc/vnc.html?path=websockify&autoconnect=1&resize=remote",
+            use_container_width=True,
+            help="Use para fazer login no iFood ou resolver captcha quando a "
+                 "sessão expirar.",
+        )
+
     # Botão de coletar/atualizar pedidos deste perfil (roda o scraper)
     if st.sidebar.button(
         "⬇️ Coletar / atualizar pedidos",
@@ -924,16 +936,6 @@ def main():
              "captcha na janela se aparecer.",
     ):
         run_scraper(sel_profile)  # bloqueia, mostra status e dá rerun ao fim
-
-    # No deploy em container, o Chrome roda num display virtual acessível por noVNC
-    if IN_CONTAINER:
-        st.sidebar.link_button(
-            "🖥️ Abrir janela do Chrome (VNC)",
-            "/vnc/vnc.html?path=vnc/websockify&autoconnect=1&resize=remote",
-            use_container_width=True,
-            help="Use para fazer login no iFood ou resolver captcha quando a "
-                 "sessão expirar.",
-        )
 
     # Editor de nome de exibição (não renomeia arquivos/sessões)
     with st.sidebar.expander("✏️ Renomear este perfil"):
