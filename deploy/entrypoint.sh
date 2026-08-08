@@ -24,6 +24,16 @@ if [ -z "${APP_USER:-}" ] || [ -z "${APP_PASSWORD:-}" ]; then
 fi
 htpasswd -bc /etc/nginx/.htpasswd "$APP_USER" "$APP_PASSWORD" >/dev/null 2>&1
 
+# Usuários extras, formato "nome:senha,nome2:senha2". Todos veem os mesmos
+# dados — o gate é de acesso ao app, não de isolamento por perfil.
+if [ -n "${APP_EXTRA_USERS:-}" ]; then
+    echo "$APP_EXTRA_USERS" | tr ',' '\n' | while IFS=: read -r u p; do
+        [ -n "$u" ] && [ -n "$p" ] || continue
+        htpasswd -b /etc/nginx/.htpasswd "$u" "$p" >/dev/null 2>&1
+        echo "usuário extra registrado: $u"
+    done
+fi
+
 envsubst '${PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
 exec supervisord -c /etc/supervisor/supervisord.conf

@@ -950,6 +950,49 @@ def orders_table(df: pd.DataFrame):
     )
 
 
+# ── Perfil lembrado entre visitas ─────────────────────────────────────────────
+#
+# A escolha é guardada num cookie, que o navegador manda de volta no próximo
+# acesso — o Streamlit lê em st.context.cookies antes de montar o seletor.
+# (localStorage não serviria: o iframe dos components é sandboxed sem
+# allow-top-navigation, então não teria como recarregar a página com o valor
+# restaurado. O cookie chega ao servidor sozinho, sem reload.)
+
+PROFILE_COOKIE = "ifood_perfil"
+
+
+def remembered_profile(profiles: list[str]) -> str:
+    """Perfil a pré-selecionar: o da URL, senão o do cookie, senão o primeiro."""
+    for wanted in (st.query_params.get("perfil"),
+                   st.context.cookies.get(PROFILE_COOKIE)):
+        if wanted in profiles:
+            return wanted
+    return profiles[0]
+
+
+def remember_profile(profile: str) -> None:
+    """Grava a escolha no cookie e reflete na URL (link compartilhável)."""
+    components.html(
+        f"""
+        <script>
+        (function () {{
+            const atual = {profile!r};
+            const doc = window.parent.document;
+            doc.cookie = "{PROFILE_COOKIE}=" + encodeURIComponent(atual) +
+                         ";path=/;max-age=" + (60 * 60 * 24 * 365) + ";SameSite=Lax";
+
+            const url = new URL(window.parent.location.href);
+            if (url.searchParams.get("perfil") !== atual) {{
+                url.searchParams.set("perfil", atual);
+                window.parent.history.replaceState({{}}, "", url.toString());
+            }}
+        }})();
+        </script>
+        """,
+        height=0,
+    )
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -963,10 +1006,11 @@ def main():
         profiles = ["default"] + [p for p in profiles if p != "default"]
     sel_profile = st.sidebar.selectbox(
         "👤 Perfil", profiles,
-        index=0,
+        index=profiles.index(remembered_profile(profiles)),
         format_func=profile_display_name,
         help="Cada perfil é uma pessoa, com banco de dados separado.",
     )
+    remember_profile(sel_profile)
 
     # Avisos de coleta falha — de TODOS os perfis, não só o selecionado
     render_scrape_alerts(profiles)
