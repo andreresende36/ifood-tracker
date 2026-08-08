@@ -5,6 +5,7 @@ Run: streamlit run dashboard.py
 """
 
 import io
+import os
 import subprocess
 import sys
 import time
@@ -20,6 +21,9 @@ from database import (
     Database, DAY_NAMES, MONTH_NAMES,
     list_profiles, profile_display_name, set_profile_display_name,
 )
+
+# Rodando no container do deploy: Chrome fica num display virtual (Xvfb + noVNC)
+IN_CONTAINER = os.environ.get("DISPLAY", "").startswith(":99")
 
 # ── Page config ───────────────────────────────────────────────────────────────
 
@@ -794,6 +798,10 @@ def run_scraper(profile: str):
 
     with st.status(f"🛵 Coletando pedidos de **{profile}**…", expanded=True) as status:
         st.caption(
+            "Abra **🖥️ Janela do Chrome (VNC)** na barra lateral para ver o "
+            "navegador. Se pedir login ou captcha, resolva por lá — a coleta "
+            "continua sozinha."
+            if IN_CONTAINER else
             "Uma janela do Chrome vai abrir. Se aparecer captcha "
             "('Não sou um robô'), resolva nela — a coleta continua sozinha."
         )
@@ -916,6 +924,16 @@ def main():
              "captcha na janela se aparecer.",
     ):
         run_scraper(sel_profile)  # bloqueia, mostra status e dá rerun ao fim
+
+    # No deploy em container, o Chrome roda num display virtual acessível por noVNC
+    if IN_CONTAINER:
+        st.sidebar.link_button(
+            "🖥️ Abrir janela do Chrome (VNC)",
+            "/vnc/vnc.html?path=vnc/websockify&autoconnect=1&resize=remote",
+            use_container_width=True,
+            help="Use para fazer login no iFood ou resolver captcha quando a "
+                 "sessão expirar.",
+        )
 
     # Editor de nome de exibição (não renomeia arquivos/sessões)
     with st.sidebar.expander("✏️ Renomear este perfil"):
