@@ -4,12 +4,15 @@ iFood Order History Dashboard
 Run: streamlit run dashboard.py
 """
 
+import hmac
 import io
 import os
+import secrets
 import subprocess
 import sys
 import time
 from datetime import datetime
+from hashlib import sha256
 from pathlib import Path
 from urllib.parse import quote
 
@@ -38,6 +41,119 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# ── Login ─────────────────────────────────────────────────────────────────────
+#
+# Gate simples: só e-mail, conferido contra uma lista. Não há verificação de
+# posse do endereço — quem souber um dos e-mails autorizados entra. A sessão
+# vive num cookie assinado, que só some se a pessoa limpar o navegador.
+#
+# Só vale no container: rodando local, o dashboard não pede nada.
+
+AUTH_COOKIE = "ifood_auth"
+SECRET_FILE = Path("data/.session_secret")
+COOKIE_MAX_AGE = 60 * 60 * 24 * 3650  # ~10 anos
+
+
+def allowed_emails() -> set[str]:
+    raw = os.environ.get("APP_EMAILS", "")
+    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+
+
+def _session_secret() -> bytes:
+    """Segredo de assinatura, guardado no volume para sobreviver a redeploys."""
+    if not SECRET_FILE.exists():
+        SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SECRET_FILE.write_text(secrets.token_hex(32))
+        SECRET_FILE.chmod(0o600)
+    return SECRET_FILE.read_text().strip().encode()
+
+
+def _sign(email: str) -> str:
+    return hmac.new(_session_secret(), email.encode(), sha256).hexdigest()
+
+
+def _email_from_cookie(raw: str | None) -> str | None:
+    """Devolve o e-mail se o cookie for íntegro e ainda estiver autorizado."""
+    if not raw or "|" not in raw:
+        return None
+    email, assinatura = raw.rsplit("|", 1)
+    email = email.strip().lower()
+    if email not in allowed_emails():
+        return None
+    return email if hmac.compare_digest(assinatura, _sign(email)) else None
+
+
+def _set_auth_cookie(email: str) -> None:
+    valor = quote(f"{email}|{_sign(email)}", safe="")
+    components.html(
+        f"""
+        <script>
+        window.parent.document.cookie =
+            "{AUTH_COOKIE}={valor};path=/;max-age={COOKIE_MAX_AGE};SameSite=Lax";
+        </script>
+        """,
+        height=0,
+    )
+
+
+def _clear_auth_cookie() -> None:
+    components.html(
+        f"""
+        <script>
+        window.parent.document.cookie = "{AUTH_COOKIE}=;path=/;max-age=0";
+        </script>
+        """,
+        height=0,
+    )
+
+
+def require_login() -> str | None:
+    """Barra a entrada até um e-mail autorizado. Devolve o e-mail logado."""
+    if not IN_CONTAINER:
+        return None
+
+    from urllib.parse import unquote
+
+    email = st.session_state.get("auth_email")
+    if not email:
+        email = _email_from_cookie(
+            unquote(st.context.cookies.get(AUTH_COOKIE, ""))
+        )
+        if email:
+            st.session_state["auth_email"] = email
+
+    if email:
+        # Gravado a cada render, não só no login: o st.rerun() do login derruba
+        # o componente antes do script rodar. De quebra, renova a validade.
+        _set_auth_cookie(email)
+        return email
+
+    # Sem sessão válida: mostra o formulário e para o script aqui
+    st.title("🛵 iFood — Histórico de Pedidos")
+    st.write("Entre com seu e-mail para acessar.")
+
+    with st.form("login"):
+        digitado = st.text_input("E-mail", placeholder="voce@exemplo.com")
+        if st.form_submit_button("Entrar", type="primary"):
+            digitado = digitado.strip().lower()
+            if digitado in allowed_emails():
+                st.session_state["auth_email"] = digitado
+                st.rerun()  # o cookie é gravado no render seguinte
+            else:
+                st.error("E-mail não autorizado.")
+    st.stop()
+
+
+def render_logout(email: str | None) -> None:
+    if not email:
+        return
+    with st.sidebar.expander(f"👋 {email}"):
+        if st.button("Sair deste dispositivo", use_container_width=True):
+            st.session_state.pop("auth_email", None)
+            _clear_auth_cookie()
+            st.rerun()
+
 
 # ── CSS tweaks ────────────────────────────────────────────────────────────────
 
@@ -1000,6 +1116,8 @@ def remember_profile(profile: str) -> None:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    email_logado = require_login()  # para o script aqui se não estiver logado
+
     st.title("🛵 iFood — Histórico de Pedidos")
     _localize_widgets()  # traduz textos internos dos widgets (ex.: 'Select all')
 
@@ -1018,6 +1136,7 @@ def main():
 
     # Avisos de coleta falha — de TODOS os perfis, não só o selecionado
     render_scrape_alerts(profiles)
+    render_logout(email_logado)
 
     # No deploy em container, o Chrome roda num display virtual acessível por noVNC.
     # Precisa vir ANTES do botão de coletar: run_scraper() bloqueia o script, e o

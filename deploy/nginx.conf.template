@@ -27,12 +27,10 @@ http {
     server {
         listen ${PORT};
 
-        auth_basic           "ifood-tracker";
-        auth_basic_user_file /etc/nginx/.htpasswd;
-
-        # Socket do VNC: sem basic auth, protegido pelo token
+        # O acesso é controlado pelo login por e-mail dentro do dashboard;
+        # o socket do VNC, pelo token (o navegador não manda credencial de
+        # basic auth no handshake de WebSocket).
         location = /vnc/websockify {
-            auth_basic off;
             if ($vnc_token_ok = 0) { return 403; }
 
             proxy_pass http://127.0.0.1:6080/websockify;

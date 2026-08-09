@@ -10,7 +10,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Chrome real (necessário para passar no Cloudflare do iFood) + Xvfb/VNC/noVNC
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl gnupg apache2-utils gettext-base tzdata \
+        ca-certificates curl gnupg gettext-base tzdata \
         xvfb x11vnc novnc websockify supervisor nginx \
         openbox x11-xserver-utils \
         fonts-liberation libnss3 libxss1 libasound2 libatk-bridge2.0-0 \
