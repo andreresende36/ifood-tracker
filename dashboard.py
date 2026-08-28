@@ -52,7 +52,9 @@ st.markdown("""
     /* O valor do KPI é o que se lê na varredura; o rótulo recua. */
     div[data-testid="stMetricValue"] > div { font-size: 1.65rem; font-weight: 700;
                                              letter-spacing: -0.02em; }
-    div[data-testid="stMetricLabel"] { opacity: 0.72; }
+    /* sem prefixo de tag: o rótulo é um <label>, não um <div> — com
+       "div[...]" a regra nunca casava e rótulo e valor saíam no mesmo tom */
+    [data-testid="stMetricLabel"] { opacity: 0.72; }
 
     /* Superfícies que o navegador desenha por padrão e não pertencem a
        design system nenhum — seleção, barra de rolagem e anel de foco. */

@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-28T21:00:00Z",
+  "title": "Design System: iFood Order Tracker",
+  "extensions": {
+    "colorMeta": {
+      "dinheiro": {
+        "role": "primary",
+        "displayName": "Dinheiro",
+        "canonical": "#ea1d2c",
+        "tonalRamp": ["#46070b", "#7b0b14", "#b1101c", "#e61525", "#ee4854", "#f37d86", "#f8b2b7", "#fde8e9"]
+      },
+      "pedidos": {
+        "role": "secondary",
+        "displayName": "Pedidos",
+        "canonical": "#3987e5",
+        "tonalRamp": ["#092444", "#103f77", "#165aab", "#1d75de", "#4e94e8", "#81b3ef", "#b5d2f5", "#e8f1fc"]
+      },
+      "economia": {
+        "role": "tertiary",
+        "displayName": "Economia",
+        "canonical": "#199e70",
+        "tonalRamp": ["#0a422f", "#127452", "#1aa776", "#22d99a", "#52e4b1", "#84ecc8", "#b7f4de", "#e9fcf5"]
+      },
+      "surface-base": {
+        "role": "neutral",
+        "displayName": "Superfície Base",
+        "canonical": "#0e1117",
+        "tonalRamp": ["#1d2330", "#333e54", "#495978", "#5f739c", "#8293b3", "#a7b2c9", "#cbd2df", "#eff1f5"]
+      },
+      "surface-raised": { "role": "neutral", "displayName": "Superfície Elevada", "canonical": "#161b24" },
+      "surface-sidebar": { "role": "neutral", "displayName": "Superfície Lateral", "canonical": "#0b0e14" },
+      "border-hairline": { "role": "neutral", "displayName": "Fio de Borda", "canonical": "#242a35" },
+      "border-sidebar": { "role": "neutral", "displayName": "Fio Lateral", "canonical": "#1e242e" },
+      "ink-primary": {
+        "role": "neutral",
+        "displayName": "Tinta Primária",
+        "canonical": "#e6e8ec",
+        "tonalRamp": ["#21252b", "#3a404d", "#535c6e", "#6d788f", "#8d96a8", "#aeb5c2", "#cfd3db", "#f1f2f4"]
+      },
+      "ink-muted": { "role": "neutral", "displayName": "Tinta Recuada", "canonical": "#8b8f9a" },
+      "chart-grid": { "role": "neutral", "displayName": "Grade", "canonical": "#22252e" },
+      "chart-axis": { "role": "neutral", "displayName": "Eixo", "canonical": "#3a3f4b" },
+      "link": { "role": "neutral", "displayName": "Link", "canonical": "#5b9df0" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Título da tela, uma vez por página." },
+      "headline": { "displayName": "Headline", "purpose": "Título de seção." },
+      "title": { "displayName": "Title", "purpose": "Título de bloco dentro da seção." },
+      "metric": { "displayName": "Metric", "purpose": "Valor do KPI. Tracking negativo aperta os dígitos para o número ler como unidade." },
+      "body": { "displayName": "Body", "purpose": "Texto corrido, legendas, ajuda." },
+      "label": { "displayName": "Label", "purpose": "Rótulo de KPI e de campo, a 72% de opacidade." }
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": [
+      { "name": "sidebar-collapse", "value": "768px" }
+    ],
+    "chartChrome": {
+      "sequentialHeatScale": [
+        [0.0, "#141b28"], [0.25, "#1c4a86"], [0.55, "#256abf"], [0.8, "#3987e5"], [1.0, "#86b6ef"]
+      ],
+      "maxDirectLabels": 8,
+      "markGapPx": 2,
+      "validatedAgainstSurface": "#0e1117",
+      "cvdWorstPairDeltaE": 8.8
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "A única superfície preenchida em vermelho da tela. Reservada para a ação que busca dados novos.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"18\" height=\"18\" viewBox=\"0 -960 960 960\" fill=\"currentColor\"><path d=\"M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z\"/></svg>Coletar / atualizar pedidos</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; gap:8px; background:#ea1d2c; color:#fff; border:1px solid #ea1d2c; border-radius:8px; padding:4px 12px; min-height:38px; font:400 16px/25.6px \"Source Sans\", system-ui, sans-serif; cursor:pointer; transition:background .15s ease-out, border-color .15s ease-out; } .ds-btn-primary:hover { background:#f5424f; border-color:#f5424f; } .ds-btn-primary:focus-visible { outline:2px solid #ea1d2c; outline-offset:2px; } .ds-btn-primary:active { background:#c8121f; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Todo o resto das ações: recarregar, limpar filtros, salvar. Superfície elevada com fio de 1px.",
+      "html": "<button class=\"ds-btn-secondary\"><svg width=\"18\" height=\"18\" viewBox=\"0 -960 960 960\" fill=\"currentColor\"><path d=\"M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-110h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 139-44t87-116h84q-28 106-114 173t-196 67Z\"/></svg>Recarregar</button>",
+      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; gap:8px; background:#10151e; color:#e6e8ec; border:1px solid #1e242e; border-radius:8px; padding:4px 12px; min-height:38px; font:400 16px/25.6px \"Source Sans\", system-ui, sans-serif; cursor:pointer; transition:border-color .15s ease-out, color .15s ease-out; } .ds-btn-secondary:hover { border-color:#ea1d2c; color:#ea1d2c; } .ds-btn-secondary:focus-visible { outline:2px solid #ea1d2c; outline-offset:2px; }"
+    },
+    {
+      "name": "Select Field",
+      "kind": "input",
+      "refersTo": "input-select",
+      "description": "Campo de filtro da sidebar. Borda sempre visível — os controles se declaram.",
+      "html": "<div class=\"ds-field\"><span class=\"ds-field-label\">Perfil</span><div class=\"ds-select\"><span>André</span><svg width=\"16\" height=\"16\" viewBox=\"0 -960 960 960\" fill=\"currentColor\"><path d=\"M480-360 280-560h400L480-360Z\"/></svg></div></div>",
+      "css": ".ds-field { display:flex; flex-direction:column; gap:6px; max-width:280px; font-family:\"Source Sans\", system-ui, sans-serif; } .ds-field-label { font-size:14px; line-height:22.4px; color:#e6e8ec; opacity:.72; } .ds-select { display:flex; align-items:center; justify-content:space-between; background:#161b24; color:#e6e8ec; border:1px solid #242a35; border-radius:8px; padding:8px 12px; font-size:14px; cursor:pointer; transition:border-color .15s ease-out; } .ds-select:hover { border-color:#3a3f4b; } .ds-select:focus-visible { outline:2px solid #ea1d2c; outline-offset:2px; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "input-select",
+      "description": "Valor selecionado dentro de um filtro. Vermelho porque filtro ativo é estado assumido pelo usuário.",
+      "html": "<span class=\"ds-chip\">2026<button class=\"ds-chip-x\" aria-label=\"Remover\">×</button></span>",
+      "css": ".ds-chip { display:inline-flex; align-items:center; gap:6px; background:#ea1d2c; color:#fff; border-radius:8px; padding:2px 6px 2px 10px; font:400 14px/22.4px \"Source Sans\", system-ui, sans-serif; } .ds-chip-x { background:none; border:0; color:#fff; opacity:.8; font-size:16px; line-height:1; cursor:pointer; padding:0 2px; } .ds-chip-x:hover { opacity:1; }"
+    },
+    {
+      "name": "Segmented Panel Selector",
+      "kind": "nav",
+      "refersTo": "button-secondary",
+      "description": "Escolhe qual painel de análise montar. Só o painel escolhido é construído — painel oculto tem largura zero e quebra o cálculo de área do gráfico.",
+      "html": "<div class=\"ds-seg\"><button class=\"ds-seg-item is-active\">Por ano</button><button class=\"ds-seg-item\">Por mês</button><button class=\"ds-seg-item\">Dia da semana</button><button class=\"ds-seg-item\">Heatmap</button></div>",
+      "css": ".ds-seg { display:inline-flex; gap:4px; font-family:\"Source Sans\", system-ui, sans-serif; } .ds-seg-item { background:#161b24; color:#e6e8ec; border:1px solid #242a35; border-radius:8px; padding:6px 14px; font-size:14px; cursor:pointer; transition:border-color .15s ease-out, color .15s ease-out; } .ds-seg-item:hover { border-color:#3a3f4b; } .ds-seg-item.is-active { background:rgba(234,29,44,.14); border-color:#ea1d2c; color:#ea1d2c; } .ds-seg-item:focus-visible { outline:2px solid #ea1d2c; outline-offset:2px; }"
+    },
+    {
+      "name": "Metric Tile",
+      "kind": "custom",
+      "refersTo": "metric-tile",
+      "description": "O componente que carrega o propósito do produto. Sem caixa, sem borda, sem fundo: uma borda em volta transformaria o número em cartão.",
+      "html": "<div class=\"ds-metric\"><span class=\"ds-metric-label\">Total gasto</span><span class=\"ds-metric-value\">R$ 18,136.65</span></div>",
+      "css": ".ds-metric { display:flex; flex-direction:column; gap:2px; font-family:\"Source Sans\", system-ui, sans-serif; } .ds-metric-label { font-size:14px; line-height:22.4px; color:#e6e8ec; opacity:.72; } .ds-metric-value { font-size:26.4px; font-weight:700; letter-spacing:-0.02em; color:#e6e8ec; font-variant-numeric:proportional-nums; }"
+    },
+    {
+      "name": "Chart Frame",
+      "kind": "custom",
+      "refersTo": "metric-tile",
+      "description": "O cromo compartilhado por todos os gráficos: fundo transparente, grade e eixo recessivos, sem título de eixo.",
+      "html": "<figure class=\"ds-chart\"><figcaption class=\"ds-chart-title\">Gasto por ano (R$)</figcaption><svg class=\"ds-chart-plot\" viewBox=\"0 0 320 140\" role=\"img\" aria-label=\"Gasto por ano\"><line class=\"ds-grid\" x1=\"0\" y1=\"35\" x2=\"320\" y2=\"35\"/><line class=\"ds-grid\" x1=\"0\" y1=\"75\" x2=\"320\" y2=\"75\"/><line class=\"ds-grid\" x1=\"0\" y1=\"115\" x2=\"320\" y2=\"115\"/><rect class=\"ds-bar\" x=\"60\" y=\"95\" width=\"70\" height=\"25\"/><rect class=\"ds-bar\" x=\"190\" y=\"28\" width=\"70\" height=\"92\"/><line class=\"ds-axis\" x1=\"0\" y1=\"120\" x2=\"320\" y2=\"120\"/></svg></figure>",
+      "css": ".ds-chart { margin:0; font-family:\"Source Sans\", system-ui, sans-serif; background:transparent; } .ds-chart-title { font-size:15px; color:#e6e8ec; margin-bottom:8px; } .ds-chart-plot { width:100%; height:auto; } .ds-grid { stroke:#22252e; stroke-width:1; } .ds-axis { stroke:#3a3f4b; stroke-width:1; } .ds-bar { fill:#ea1d2c; stroke:#0e1117; stroke-width:2; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Extrato Honesto",
+    "overview": "A tela é um extrato que não poupa quem olha. O número grande existe porque precisa doer, não porque é bonito: a razão de ser do produto é fazer um casal pedir menos, e nada na interface pode competir com a quantia. Tudo o que não é dado recua — a grade dos gráficos fica a um passo do fundo, os eixos não repetem o que o título já disse, e o cromo do navegador (seleção, rolagem, foco) é tingido para não parecer peça de outro sistema.\n\nO caráter é contido e preciso. A marca não aparece em blocos nem em faixas: ela vive no logo do canto, no anel de foco, no rastro da seleção de texto e na única ação preenchida da tela. Os controles, por outro lado, se declaram — borda visível em cada campo, ação principal em vermelho cheio — porque este é um painel para agir, não para contemplar. A tensão é deliberada: superfícies quietas, controles presentes.\n\nEscuro não por moda, mas pela cena de uso: duas pessoas em casa, à noite, sentadas na mesma tela, decidindo se pedem ou cozinham.",
+    "keyCharacteristics": [
+      "Fundo quase preto em três camadas tonais; zero sombra",
+      "Três matizes com papel fixo — cor significa grandeza, nunca posição",
+      "Cromo recessivo: grade, eixos e rótulos sempre abaixo do dado",
+      "Vermelho da marca raro, alto impacto: uma ação por tela",
+      "Rótulo recua (72% de opacidade), valor avança (700, −0.02em)"
+    ],
+    "rules": [
+      { "name": "A Regra do Papel", "body": "Cor segue a grandeza, nunca a posição do gráfico nem o ranking da série. Dinheiro é sempre vermelho, contagem é sempre azul, contrafactual é sempre verde — em todos os painéis, em todos os filtros. Um gráfico que inverta isso está errado, mesmo que fique bonito.", "section": "colors" },
+      { "name": "A Regra das Três Matizes", "body": "O teto é três, e é medido, não estético: com o vermelho da marca fixo, todo quarto matiz reprovou na separação para daltonismo (amarelo↔vermelho ΔE 4.4; violeta↔azul 1.9). Mais de três categorias vira barra, não fatia de pizza.", "section": "colors" },
+      { "name": "A Regra do Zero que Recua", "body": "Em escala sequencial sobre fundo escuro, o passo do zero vai para perto da superfície, nunca para o claro. O contrário transforma uma matriz quase vazia num bloco branco gritando na tela.", "section": "colors" },
+      { "name": "A Regra do Rótulo que Recua", "body": "No par rótulo/valor, o rótulo vai a 72% de opacidade e o valor fica em 700. Se os dois saem no mesmo tom, o olho tem que escolher — e a varredura para.", "section": "typography" },
+      { "name": "A Regra do Dígito", "body": "tabular-nums só onde números se alinham na vertical (tabela, ticks de eixo). No valor grande e solto do KPI, figuras proporcionais: dígitos de largura fixa fazem 121 parecer frouxo em corpo grande.", "section": "typography" },
+      { "name": "A Regra do Tom, não da Sombra", "body": "Elevação se expressa por camada de cor e fio de 1px. Nenhum elemento ganha box-shadow — nem em repouso, nem em hover. Se dois blocos precisam se separar, o caminho é tom ou espaço, nunca profundidade simulada.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do amarrar cada matiz a uma grandeza e mantê-la em todos os painéis: Dinheiro #ea1d2c, Pedidos #3987e5, Economia #199e70.",
+      "Do rodar o validador de paleta contra #0e1117 antes de introduzir qualquer cor de dado nova.",
+      "Do dar mais espaço acima de um título (2.5rem) do que abaixo (0.75rem).",
+      "Do usar Material Symbols pelo parâmetro icon= dos componentes.",
+      "Do escapar R\\$ em texto markdown — dois cifrões na mesma string viram delimitador de LaTeX e o Streamlit engole o trecho entre eles.",
+      "Do montar só o painel selecionado; painel oculto tem largura zero e quebra o cálculo de área do gráfico.",
+      "Do declarar na tela quando o número é estimativa."
+    ],
+    "donts": [
+      "Don't introduzir um quarto matiz de dado. Acima de três categorias, o formato muda (barra), não a paleta.",
+      "Don't usar sombra em lugar nenhum. Separação é tom ou espaço.",
+      "Don't trocar backgroundColor do tema sem revalidar a paleta inteira — o contraste e a separação para daltonismo foram medidos contra #0e1117.",
+      "Don't pôr emoji no lugar de ícone.",
+      "Don't desenhar borda em volta de marca de dado; o respiro de 2px na cor da superfície faz esse trabalho.",
+      "Don't rotular toda barra de uma série longa nem toda fatia de uma rosca: acima de 8 marcas, ou abaixo de 8% de uma fatia, o rótulo é recortado.",
+      "Don't deixar mais de uma ação preenchida em vermelho por tela.",
+      "Don't repetir num painel um valor que o bloco de KPIs já mostra."
+    ]
+  }
+}
