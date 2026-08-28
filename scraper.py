@@ -13,7 +13,6 @@ import argparse
 import asyncio
 import json
 import logging
-import os
 import re
 import shutil
 import subprocess
@@ -129,9 +128,6 @@ class IFoodScraper:
         ]
         if self.headless:
             args.insert(1, "--headless=new")
-        # Em container (Railway) o sandbox do Chrome não tem user namespaces
-        extra = os.environ.get("CHROME_EXTRA_ARGS", "").split()
-        args[1:1] = extra
 
         log.info(f"Iniciando Chrome real: {chrome}")
         self._chrome_proc = subprocess.Popen(

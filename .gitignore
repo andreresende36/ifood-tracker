@@ -15,8 +15,3 @@ __pycache__/
 # data/ é versionado de propósito p/ guardar o histórico de pedidos.
 # Mas ignora artefatos voláteis dentro dele:
 data/*.log
-
-.DS_Store
-
-# Segredo de assinatura das sessões — nunca versionar
-data/.session_secret

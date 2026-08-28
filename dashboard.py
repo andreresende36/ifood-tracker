@@ -4,17 +4,11 @@ iFood Order History Dashboard
 Run: streamlit run dashboard.py
 """
 
-import hmac
 import io
-import os
-import secrets
 import subprocess
 import sys
 import time
-from datetime import datetime
-from hashlib import sha256
 from pathlib import Path
-from urllib.parse import quote
 
 import pandas as pd
 import plotly.express as px
@@ -27,12 +21,6 @@ from database import (
     list_profiles, profile_display_name, set_profile_display_name,
 )
 
-# Rodando no container do deploy: Chrome fica num display virtual (Xvfb + noVNC)
-IN_CONTAINER = os.environ.get("DISPLAY", "").startswith(":99")
-if IN_CONTAINER:
-    sys.path.insert(0, str(Path(__file__).parent / "deploy"))
-    import vnc_chrome
-
 # ── Page config ───────────────────────────────────────────────────────────────
 
 st.set_page_config(
@@ -41,119 +29,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-# ── Login ─────────────────────────────────────────────────────────────────────
-#
-# Gate simples: só e-mail, conferido contra uma lista. Não há verificação de
-# posse do endereço — quem souber um dos e-mails autorizados entra. A sessão
-# vive num cookie assinado, que só some se a pessoa limpar o navegador.
-#
-# Só vale no container: rodando local, o dashboard não pede nada.
-
-AUTH_COOKIE = "ifood_auth"
-SECRET_FILE = Path("data/.session_secret")
-COOKIE_MAX_AGE = 60 * 60 * 24 * 3650  # ~10 anos
-
-
-def allowed_emails() -> set[str]:
-    raw = os.environ.get("APP_EMAILS", "")
-    return {e.strip().lower() for e in raw.split(",") if e.strip()}
-
-
-def _session_secret() -> bytes:
-    """Segredo de assinatura, guardado no volume para sobreviver a redeploys."""
-    if not SECRET_FILE.exists():
-        SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
-        SECRET_FILE.write_text(secrets.token_hex(32))
-        SECRET_FILE.chmod(0o600)
-    return SECRET_FILE.read_text().strip().encode()
-
-
-def _sign(email: str) -> str:
-    return hmac.new(_session_secret(), email.encode(), sha256).hexdigest()
-
-
-def _email_from_cookie(raw: str | None) -> str | None:
-    """Devolve o e-mail se o cookie for íntegro e ainda estiver autorizado."""
-    if not raw or "|" not in raw:
-        return None
-    email, assinatura = raw.rsplit("|", 1)
-    email = email.strip().lower()
-    if email not in allowed_emails():
-        return None
-    return email if hmac.compare_digest(assinatura, _sign(email)) else None
-
-
-def _set_auth_cookie(email: str) -> None:
-    valor = quote(f"{email}|{_sign(email)}", safe="")
-    components.html(
-        f"""
-        <script>
-        window.parent.document.cookie =
-            "{AUTH_COOKIE}={valor};path=/;max-age={COOKIE_MAX_AGE};SameSite=Lax";
-        </script>
-        """,
-        height=0,
-    )
-
-
-def _clear_auth_cookie() -> None:
-    components.html(
-        f"""
-        <script>
-        window.parent.document.cookie = "{AUTH_COOKIE}=;path=/;max-age=0";
-        </script>
-        """,
-        height=0,
-    )
-
-
-def require_login() -> str | None:
-    """Barra a entrada até um e-mail autorizado. Devolve o e-mail logado."""
-    if not IN_CONTAINER:
-        return None
-
-    from urllib.parse import unquote
-
-    email = st.session_state.get("auth_email")
-    if not email:
-        email = _email_from_cookie(
-            unquote(st.context.cookies.get(AUTH_COOKIE, ""))
-        )
-        if email:
-            st.session_state["auth_email"] = email
-
-    if email:
-        # Gravado a cada render, não só no login: o st.rerun() do login derruba
-        # o componente antes do script rodar. De quebra, renova a validade.
-        _set_auth_cookie(email)
-        return email
-
-    # Sem sessão válida: mostra o formulário e para o script aqui
-    st.title("🛵 iFood — Histórico de Pedidos")
-    st.write("Entre com seu e-mail para acessar.")
-
-    with st.form("login"):
-        digitado = st.text_input("E-mail", placeholder="voce@exemplo.com")
-        if st.form_submit_button("Entrar", type="primary"):
-            digitado = digitado.strip().lower()
-            if digitado in allowed_emails():
-                st.session_state["auth_email"] = digitado
-                st.rerun()  # o cookie é gravado no render seguinte
-            else:
-                st.error("E-mail não autorizado.")
-    st.stop()
-
-
-def render_logout(email: str | None) -> None:
-    if not email:
-        return
-    with st.sidebar.expander(f"👋 {email}"):
-        if st.button("Sair deste dispositivo", use_container_width=True):
-            st.session_state.pop("auth_email", None)
-            _clear_auth_cookie()
-            st.rerun()
-
 
 # ── CSS tweaks ────────────────────────────────────────────────────────────────
 
@@ -919,10 +794,6 @@ def run_scraper(profile: str):
 
     with st.status(f"🛵 Coletando pedidos de **{profile}**…", expanded=True) as status:
         st.caption(
-            "Abra **🖥️ Janela do Chrome (VNC)** na barra lateral para ver o "
-            "navegador. Se pedir login ou captcha, resolva por lá — a coleta "
-            "continua sozinha."
-            if IN_CONTAINER else
             "Uma janela do Chrome vai abrir. Se aparecer captcha "
             "('Não sou um robô'), resolva nela — a coleta continua sozinha."
         )
@@ -949,58 +820,6 @@ def run_scraper(profile: str):
     st.toast("Dados atualizados!" if ok else "Coleta finalizada com avisos.")
     time.sleep(1)
     st.rerun()
-
-
-def scrape_status(profile: str) -> dict | None:
-    """
-    Lê o log da última coleta do perfil. Devolve None se nunca coletou.
-    'state' é ok, login (sessão expirada), erro ou velho (passou da rotina diária).
-    """
-    log_path = Path(f"data/scrape_{profile}.log")
-    if not log_path.exists():
-        return None
-
-    text = _read_log(log_path)
-    when = datetime.fromtimestamp(log_path.stat().st_mtime)
-    horas = (datetime.now() - when).total_seconds() / 3600
-
-    if "FIM_SCRAPER_OK" not in text:
-        # O scraper loga isso enquanto espera login/captcha que ninguém resolveu
-        expirou = "captcha/login" in text or "login" in text.lower()
-        state = "login" if expirou else "erro"
-    elif horas > 36:  # a rotina roda todo dia 00:00 — 36h significa que falhou
-        state = "velho"
-    else:
-        state = "ok"
-
-    return {"state": state, "when": when, "horas": horas}
-
-
-def render_scrape_alerts(profiles: list[str]) -> None:
-    """Avisa na sidebar quando a última coleta de algum perfil não foi bem."""
-    for profile in profiles:
-        info = scrape_status(profile)
-        if info is None or info["state"] == "ok":
-            continue
-        nome = profile_display_name(profile)
-        quando = info["when"].strftime("%d/%m às %H:%M")
-        if info["state"] == "login":
-            st.sidebar.error(
-                f"**{nome}** — sessão do iFood expirou em {quando}. "
-                "Clique em coletar e faça login pela janela do Chrome (VNC).",
-                icon="🔑",
-            )
-        elif info["state"] == "velho":
-            st.sidebar.warning(
-                f"**{nome}** — última coleta em {quando} "
-                f"({info['horas'] / 24:.0f}d atrás). A rotina diária não rodou.",
-                icon="🕐",
-            )
-        else:
-            st.sidebar.warning(
-                f"**{nome}** — a coleta de {quando} terminou com erro.",
-                icon="⚠️",
-            )
 
 
 def _read_log(path: Path) -> str:
@@ -1070,54 +889,9 @@ def orders_table(df: pd.DataFrame):
     )
 
 
-# ── Perfil lembrado entre visitas ─────────────────────────────────────────────
-#
-# A escolha é guardada num cookie, que o navegador manda de volta no próximo
-# acesso — o Streamlit lê em st.context.cookies antes de montar o seletor.
-# (localStorage não serviria: o iframe dos components é sandboxed sem
-# allow-top-navigation, então não teria como recarregar a página com o valor
-# restaurado. O cookie chega ao servidor sozinho, sem reload.)
-
-PROFILE_COOKIE = "ifood_perfil"
-
-
-def remembered_profile(profiles: list[str]) -> str:
-    """Perfil a pré-selecionar: o da URL, senão o do cookie, senão o primeiro."""
-    for wanted in (st.query_params.get("perfil"),
-                   st.context.cookies.get(PROFILE_COOKIE)):
-        if wanted in profiles:
-            return wanted
-    return profiles[0]
-
-
-def remember_profile(profile: str) -> None:
-    """Grava a escolha no cookie e reflete na URL (link compartilhável)."""
-    components.html(
-        f"""
-        <script>
-        (function () {{
-            const atual = {profile!r};
-            const doc = window.parent.document;
-            doc.cookie = "{PROFILE_COOKIE}=" + encodeURIComponent(atual) +
-                         ";path=/;max-age=" + (60 * 60 * 24 * 365) + ";SameSite=Lax";
-
-            const url = new URL(window.parent.location.href);
-            if (url.searchParams.get("perfil") !== atual) {{
-                url.searchParams.set("perfil", atual);
-                window.parent.history.replaceState({{}}, "", url.toString());
-            }}
-        }})();
-        </script>
-        """,
-        height=0,
-    )
-
-
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    email_logado = require_login()  # para o script aqui se não estiver logado
-
     st.title("🛵 iFood — Histórico de Pedidos")
     _localize_widgets()  # traduz textos internos dos widgets (ex.: 'Select all')
 
@@ -1128,53 +902,10 @@ def main():
         profiles = ["default"] + [p for p in profiles if p != "default"]
     sel_profile = st.sidebar.selectbox(
         "👤 Perfil", profiles,
-        index=profiles.index(remembered_profile(profiles)),
+        index=0,
         format_func=profile_display_name,
         help="Cada perfil é uma pessoa, com banco de dados separado.",
     )
-    remember_profile(sel_profile)
-
-    # Avisos de coleta falha — de TODOS os perfis, não só o selecionado
-    render_scrape_alerts(profiles)
-    render_logout(email_logado)
-
-    # No deploy em container, o Chrome roda num display virtual acessível por noVNC.
-    # Precisa vir ANTES do botão de coletar: run_scraper() bloqueia o script, e o
-    # link é justamente o que o usuário precisa enquanto a coleta está rodando.
-    if IN_CONTAINER:
-        # O noVNC monta a URL do socket a partir da raiz ('wss://host/' + path),
-        # não relativa a /vnc/ — daí o prefixo explícito. O token vai junto
-        # porque o navegador não manda basic auth no handshake do WebSocket.
-        ws_path = quote(f"vnc/websockify?token={os.environ.get('VNC_TOKEN', '')}",
-                        safe="")
-        st.sidebar.link_button(
-            "🖥️ Abrir janela do Chrome (VNC)",
-            f"/vnc/vnc.html?path={ws_path}&autoconnect=1&resize=remote",
-            use_container_width=True,
-            help="Use para fazer login no iFood ou resolver captcha quando a "
-                 "sessão expirar.",
-        )
-
-        # Fora de uma coleta não há Chrome no display — o VNC fica vazio.
-        # Este par de botões abre um navegador só para o login manual.
-        if vnc_chrome.is_running(sel_profile):
-            st.sidebar.success(
-                f"Chrome aberto para **{profile_display_name(sel_profile)}**. "
-                "Logue pelo VNC e depois feche.",
-                icon="🔑",
-            )
-            if st.sidebar.button("✅ Terminei o login — fechar Chrome",
-                                 use_container_width=True):
-                vnc_chrome.stop(sel_profile)
-                st.rerun()
-        elif st.sidebar.button(
-            "🔑 Abrir Chrome para login",
-            use_container_width=True,
-            help="Abre o iFood no display virtual para você logar sem pressa. "
-                 "Feche antes de coletar.",
-        ):
-            vnc_chrome.start(sel_profile)
-            st.rerun()
 
     # Botão de coletar/atualizar pedidos deste perfil (roda o scraper)
     if st.sidebar.button(
