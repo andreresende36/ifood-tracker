@@ -1,0 +1,34 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>localize</title>
+<!--
+  Traduz textos internos dos widgets do Streamlit que não têm API
+  (ex.: "Select all" do multiselect).
+
+  Mora num arquivo estático porque st.components.v1.html está depreciado e o
+  substituto (st.iframe) recebe uma URL, não HTML inline. Servido pelo próprio
+  Streamlit em /app/static/, fica na MESMA ORIGEM da página — que é o que
+  permite alcançar window.parent.document. Um data: URI não serviria: origem
+  opaca bloqueia esse acesso.
+
+  Requer enableStaticServing = true em .streamlit/config.toml.
+-->
+<script>
+  const doc = window.parent.document;
+  const MAP = {
+    "Select all": "Selecionar todos",
+    "Clear all": "Limpar todos",
+    "No options to select.": "Nenhuma opção.",
+    "No results": "Nenhum resultado",
+  };
+  function translate() {
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = walker.nextNode())) {
+      const t = n.nodeValue.trim();
+      if (MAP[t]) n.nodeValue = n.nodeValue.replace(t, MAP[t]);
+    }
+  }
+  translate();
+  new MutationObserver(translate).observe(doc.body, { childList: true, subtree: true });
+</script>

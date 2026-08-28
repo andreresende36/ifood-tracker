@@ -16,7 +16,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-import streamlit.components.v1 as components
 
 from database import (
     Database, DAY_NAMES, MONTH_NAMES,
@@ -44,6 +43,8 @@ st.markdown("""
     }
     .block-container { padding-top: 1.5rem; }
     div[data-testid="stMetricValue"] > div { font-size: 1.6rem; font-weight: 700; }
+    /* iframe utilitário do localize.html — carrega e roda, mas não ocupa espaço */
+    .st-key-localize_iframe { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -52,31 +53,19 @@ def _localize_widgets():
     """
     Traduz textos internos dos widgets do Streamlit que não têm API
     (ex.: 'Select all' do multiselect). Roda no DOM pai via MutationObserver.
+
+    O script vive em static/localize.html porque st.components.v1.html está
+    depreciado e st.iframe recebe URL, não HTML inline. Servido pelo Streamlit
+    na mesma origem, o iframe alcança window.parent.document — o que um data:
+    URI (origem opaca) não permitiria.
     """
-    components.html(
-        """
-        <script>
-        const doc = window.parent.document;
-        const MAP = {
-            "Select all": "Selecionar todos",
-            "Clear all": "Limpar todos",
-            "No options to select.": "Nenhuma opção.",
-            "No results": "Nenhum resultado",
-        };
-        function translate() {
-            const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-            let n;
-            while ((n = walker.nextNode())) {
-                const t = n.nodeValue.trim();
-                if (MAP[t]) n.nodeValue = n.nodeValue.replace(t, MAP[t]);
-            }
-        }
-        translate();
-        new MutationObserver(translate).observe(doc.body, {childList: true, subtree: true});
-        </script>
-        """,
-        height=0,
-    )
+    # st.iframe recusa height=0 (o components.html antigo aceitava), então o
+    # iframe vai com 1px dentro de um container escondido por CSS. display:none
+    # não impede o iframe de carregar nem o script de rodar.
+    with st.container(key="localize_iframe"):
+        # A barra inicial é obrigatória: sem ela o st.iframe não reconhece
+        # como URL e embute o caminho como se fosse HTML cru.
+        st.iframe("/app/static/localize.html", height=1)
 
 PRICE_RANGE_ORDER = [
     "Até R$30", "R$30–50", "R$50–80", "R$80–120", "Acima de R$120", "Desconhecido"

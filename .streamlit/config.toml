@@ -1,0 +1,4 @@
+[server]
+# Serve a pasta static/ em /app/static/. Necessário para o localize.html,
+# que st.iframe carrega para traduzir os textos internos dos widgets.
+enableStaticServing = true
