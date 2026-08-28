@@ -639,6 +639,10 @@ def _bar(df, x, y, title, color=DINHEIRO, text=None, xtype=None, orient=None):
         # ("R$ 1…"). Com auto, quem tem barra larga leva o número por dentro e
         # só as curtas escrevem do lado de fora.
         textposition="auto" if orient == "h" else "outside",
+        # O Plotly gira o rótulo para caber quando a barra é estreita, e o
+        # número sai deitado dentro da barra. Travado na horizontal, ele vai
+        # para fora quando não couber dentro.
+        textangle=0,
         textfont=dict(color=INK_MUTE),
         insidetextfont=dict(color=SURFACE),
         # 2px de respiro entre barras vizinhas em vez de borda desenhada
@@ -1127,15 +1131,18 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
     )
     home_food = sav["home_cost"].sum()
 
-    # Dois tiles, não quatro: os outros dois decompõem o primeiro e desciam
-    # para uma fileira de números que ninguém reconcilia de cabeça.
-    c1, c2 = st.columns(2)
-    c1.metric("Economia estimada", _brl(total_saved))
-    c2.metric("Custo cozinhando",  _brl(home_total))
+    # Sem chip de delta no primeiro tile: economizar é o desfecho bom, e o chip
+    # saía em vermelho com seta para cima — alarme onde não há alarme.
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Economia total",      _brl(total_saved))
+    c2.metric("Custo cozinhando",    _brl(home_total))
+    c3.metric("Economia nos pratos", _brl(food_saved))
+    c4.metric("Taxas evitadas",      _brl(fees))
+    # Os quatro tiles não têm o mesmo estatuto e a fileira não mostra isso:
+    # três respondem ao controle de otimismo, um é valor apurado.
     st.caption(
-        f"{_brl(food_saved, md=True)} de economia estimada na comida "
-        f"　·　{_brl(fees, md=True)} de taxas, evitáveis por inteiro — essa "
-        "parte não é estimativa, e o controle acima não a move."
+        "**Economia nos pratos** é estimativa e segue o controle acima; "
+        "**taxas evitadas** é valor apurado e não se move."
     )
 
     # Economia agregada por tipo de prato
