@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-28T21:00:00Z",
+  "generatedAt": "2026-08-28T21:55:00Z",
   "title": "Design System: iFood Order Tracker",
   "extensions": {
     "colorMeta": {
@@ -49,7 +49,8 @@
       "title": { "displayName": "Title", "purpose": "Título de bloco dentro da seção." },
       "metric": { "displayName": "Metric", "purpose": "Valor do KPI. Tracking negativo aperta os dígitos para o número ler como unidade." },
       "body": { "displayName": "Body", "purpose": "Texto corrido, legendas, ajuda." },
-      "label": { "displayName": "Label", "purpose": "Rótulo de KPI e de campo, a 72% de opacidade." }
+      "label": { "displayName": "Label", "purpose": "Rótulo de KPI e de campo, a 72% de opacidade." },
+      "icon": { "displayName": "Icon", "purpose": "Ícone Material Symbols. Fonte, não tipo de leitura — mesmo conjunto que o Streamlit carrega no parâmetro icon=." }
     },
     "shadows": [],
     "motion": [],
@@ -81,7 +82,7 @@
       "refersTo": "button-secondary",
       "description": "Todo o resto das ações: recarregar, limpar filtros, salvar. Superfície elevada com fio de 1px.",
       "html": "<button class=\"ds-btn-secondary\"><svg width=\"18\" height=\"18\" viewBox=\"0 -960 960 960\" fill=\"currentColor\"><path d=\"M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-110h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 139-44t87-116h84q-28 106-114 173t-196 67Z\"/></svg>Recarregar</button>",
-      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; gap:8px; background:#10151e; color:#e6e8ec; border:1px solid #1e242e; border-radius:8px; padding:4px 12px; min-height:38px; font:400 16px/25.6px \"Source Sans\", system-ui, sans-serif; cursor:pointer; transition:border-color .15s ease-out, color .15s ease-out; } .ds-btn-secondary:hover { border-color:#ea1d2c; color:#ea1d2c; } .ds-btn-secondary:focus-visible { outline:2px solid #ea1d2c; outline-offset:2px; }"
+      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; gap:8px; background:#161b24; color:#e6e8ec; border:1px solid #1e242e; border-radius:8px; padding:4px 12px; min-height:38px; font:400 16px/25.6px \"Source Sans\", system-ui, sans-serif; cursor:pointer; transition:border-color .15s ease-out, color .15s ease-out; } .ds-btn-secondary:hover { border-color:#ea1d2c; color:#ea1d2c; } .ds-btn-secondary:focus-visible { outline:2px solid #ea1d2c; outline-offset:2px; }"
     },
     {
       "name": "Select Field",
@@ -112,8 +113,16 @@
       "kind": "custom",
       "refersTo": "metric-tile",
       "description": "O componente que carrega o propósito do produto. Sem caixa, sem borda, sem fundo: uma borda em volta transformaria o número em cartão.",
-      "html": "<div class=\"ds-metric\"><span class=\"ds-metric-label\">Total gasto</span><span class=\"ds-metric-value\">R$ 18,136.65</span></div>",
+      "html": "<div class=\"ds-metric\"><span class=\"ds-metric-label\">Total gasto</span><span class=\"ds-metric-value\">R$ 18.136,65</span></div>",
       "css": ".ds-metric { display:flex; flex-direction:column; gap:2px; font-family:\"Source Sans\", system-ui, sans-serif; } .ds-metric-label { font-size:14px; line-height:22.4px; color:#e6e8ec; opacity:.72; } .ds-metric-value { font-size:26.4px; font-weight:700; letter-spacing:-0.02em; color:#e6e8ec; font-variant-numeric:proportional-nums; }"
+    },
+    {
+      "name": "Signal Line",
+      "kind": "custom",
+      "refersTo": "metric-tile",
+      "description": "A primeira frase da tela: o veredito do mês contra a média dos meses anteriores. Só o veredito leva cor; a ressalva sai em tinta de leitura.",
+      "html": "<p class=\"ds-signal\"><svg class=\"ds-signal-icon\" width=\"22\" height=\"22\" viewBox=\"0 -960 960 960\" fill=\"currentColor\"><path d=\"m136-240-56-56 296-298 160 160 208-206H640v-80h240v240h-80v-104L536-320 376-480 136-240Z\"/></svg>Agosto de 2026 está <span class=\"ds-signal-verdict\">10% acima da média</span>, dentro da faixa dos outros meses.</p><p class=\"ds-signal-note\">Média dos 9 meses anteriores até o dia 28: <strong>R$ 1.624,29</strong> · faixa de <strong>R$ 908,62</strong> a <strong>R$ 3.095,79</strong>　·　No ritmo atual o mês fecha em <strong>R$ 1.974,80</strong> — estimativa</p>",
+      "css": ".ds-signal { margin:0 0 .25rem; font:600 20px/24px \"Source Sans\", system-ui, sans-serif; letter-spacing:-0.1px; color:#e6e8ec; } .ds-signal-icon { color:#ea1d2c; vertical-align:-4px; margin-right:.4rem; } .ds-signal-verdict { color:#ea1d2c; } .ds-signal-note { margin:0; font:400 14px/22.4px \"Source Sans\", system-ui, sans-serif; color:#8b8f9a; } .ds-signal-note strong { color:#8b8f9a; font-weight:600; }"
     },
     {
       "name": "Chart Frame",
@@ -140,7 +149,8 @@
       { "name": "A Regra do Zero que Recua", "body": "Em escala sequencial sobre fundo escuro, o passo do zero vai para perto da superfície, nunca para o claro. O contrário transforma uma matriz quase vazia num bloco branco gritando na tela.", "section": "colors" },
       { "name": "A Regra do Rótulo que Recua", "body": "No par rótulo/valor, o rótulo vai a 72% de opacidade e o valor fica em 700. Se os dois saem no mesmo tom, o olho tem que escolher — e a varredura para.", "section": "typography" },
       { "name": "A Regra do Dígito", "body": "tabular-nums só onde números se alinham na vertical (tabela, ticks de eixo). No valor grande e solto do KPI, figuras proporcionais: dígitos de largura fixa fazem 121 parecer frouxo em corpo grande.", "section": "typography" },
-      { "name": "A Regra do Tom, não da Sombra", "body": "Elevação se expressa por camada de cor e fio de 1px. Nenhum elemento ganha box-shadow — nem em repouso, nem em hover. Se dois blocos precisam se separar, o caminho é tom ou espaço, nunca profundidade simulada.", "section": "elevation" }
+      { "name": "A Regra do Tom, não da Sombra", "body": "Elevação se expressa por camada de cor e fio de 1px. Nenhum elemento ganha box-shadow — nem em repouso, nem em hover. Se dois blocos precisam se separar, o caminho é tom ou espaço, nunca profundidade simulada.", "section": "elevation" },
+      { "name": "A Regra da Moeda", "body": "Dinheiro sai em formato brasileiro — ponto no milhar, vírgula no decimal (R$ 1.724,05). Vale para texto, rótulo de barra, tick de eixo e hover; os três últimos são formatados pelo Plotly, que precisa de separators=\",.\" no layout. O padrão do Python é o americano, e uma tela em português com R$ 1,724.05 denuncia que ninguém olhou.", "section": "typography" }
     ],
     "dos": [
       "Do amarrar cada matiz a uma grandeza e mantê-la em todos os painéis: Dinheiro #ea1d2c, Pedidos #3987e5, Economia #199e70.",
@@ -149,13 +159,15 @@
       "Do usar Material Symbols pelo parâmetro icon= dos componentes.",
       "Do escapar R\\$ em texto markdown — dois cifrões na mesma string viram delimitador de LaTeX e o Streamlit engole o trecho entre eles.",
       "Do montar só o painel selecionado; painel oculto tem largura zero e quebra o cálculo de área do gráfico.",
-      "Do declarar na tela quando o número é estimativa."
+      "Do declarar na tela quando o número é estimativa.",
+      "Do comparar períodos como-por-como: o mês parcial vai contra o mesmo recorte de dias dos meses anteriores, nunca contra meses cheios."
     ],
     "donts": [
       "Don't introduzir um quarto matiz de dado. Acima de três categorias, o formato muda (barra), não a paleta.",
       "Don't usar sombra em lugar nenhum. Separação é tom ou espaço.",
       "Don't trocar backgroundColor do tema sem revalidar a paleta inteira — o contraste e a separação para daltonismo foram medidos contra #0e1117.",
       "Don't pôr emoji no lugar de ícone.",
+      "Don't emitir a mesma legenda dentro de cada coluna de um par: a nota que vale para a linha inteira sai uma vez, antes de abrir as colunas.",
       "Don't desenhar borda em volta de marca de dado; o respiro de 2px na cor da superfície faz esse trabalho.",
       "Don't rotular toda barra de uma série longa nem toda fatia de uma rosca: acima de 8 marcas, ou abaixo de 8% de uma fatia, o rótulo é recortado.",
       "Don't deixar mais de uma ação preenchida em vermelho por tela.",

@@ -9,7 +9,7 @@ import os
 import subprocess
 import sys
 import time
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -167,6 +167,19 @@ def _fmt_coleta(valor) -> str:
     if pd.isna(ts):
         return "–"
     return ts.tz_convert(BRASILIA).strftime("%d-%m-%Y %H:%M:%S")
+
+
+def _brl(valor: float, casas: int = 2, md: bool = False) -> str:
+    """
+    Dinheiro no formato do país da interface: ponto no milhar, vírgula no
+    decimal. O f-string do Python faz o oposto (1,724.05) e a tela inteira
+    saía com pontuação americana.
+
+    `md=True` escapa o cifrão: em markdown, dois `$` na mesma string viram
+    delimitador de LaTeX e o Streamlit engole o trecho entre eles.
+    """
+    corpo = f"{valor:,.{casas}f}".translate(str.maketrans({",": ".", ".": ","}))
+    return ("R\\$ " if md else "R$ ") + corpo
 
 
 # ── Data loading ──────────────────────────────────────────────────────────────
@@ -379,13 +392,149 @@ def show_kpis(df: pd.DataFrame):
     # ("R$ 18,1…"). Três primários com valor cheio; cupons e taxas são leitura
     # de apoio e descem para uma linha discreta.
     c1, c2, c3 = st.columns(3)
-    c1.metric("Total gasto",  f"R$ {total_spent:,.2f}")
+    c1.metric("Total gasto",  _brl(total_spent))
     c2.metric("Pedidos",      f"{n_orders}")
-    c3.metric("Ticket médio", f"R$ {avg_ticket:,.2f}")
+    c3.metric("Ticket médio", _brl(avg_ticket))
     st.caption(
-        f"Economizado em cupons **R\\$ {total_savings:,.2f}**"
-        f"　·　Taxas de entrega e serviço **R\\$ {(total_delivery + total_service):,.2f}**"
+        f"Economizado em cupons **{_brl(total_savings, md=True)}**"
+        f"　·　Taxas de entrega e serviço **{_brl(total_delivery + total_service, md=True)}**"
     )
+
+
+# ── Sinal do mês ──────────────────────────────────────────────────────────────
+
+MESES_EXTENSO = [
+    "", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+]
+
+# Abaixo de dois meses fechados não existe média: existe o mês passado com
+# outro nome. O bloco diz que não há base em vez de inventar comparação.
+MIN_MESES_BASE = 2
+
+
+def month_signal(orders_df: pd.DataFrame) -> dict | None:
+    """
+    Compara o mês corrente com a média dos meses anteriores, dia a dia.
+
+    Duas decisões carregam o número:
+
+    1. Roda sobre o histórico INTEIRO, nunca sobre o df filtrado — o dashboard
+       abre filtrado no mês corrente e a baseline sairia vazia.
+    2. Compara como-por-como: o realizado até o dia N contra o gasto dos meses
+       anteriores ATÉ O MESMO DIA N. Contra meses cheios agosto aparece 0,2%
+       acima; contra o mesmo recorte, 9,8%. A comparação ingênua esconde o
+       sinal inteiro.
+
+    Só pedido entregue entra: cancelado não é gasto.
+    """
+    if orders_df.empty or "ordered_at" not in orders_df:
+        return None
+
+    df = orders_df
+    if "status" in df:
+        df = df[df["status"] == "Entregue"]
+    df = df.assign(_dt=pd.to_datetime(df["ordered_at"], errors="coerce")).dropna(subset=["_dt"])
+    if df.empty:
+        return None
+
+    df = df.assign(_mes=df["_dt"].dt.to_period("M"))
+    ref = df["_mes"].max()
+
+    # Mês em curso só é "em curso" no calendário de verdade; se a última coleta
+    # parou num mês passado, aquele mês está fechado e não cabe projeção.
+    hoje = datetime.now(BRASILIA)
+    parcial = ref == pd.Period(hoje, freq="M")
+    dias_no_mes = ref.days_in_month
+    corte = min(hoje.day, dias_no_mes) if parcial else dias_no_mes
+
+    ref_df = df[df["_mes"] == ref]
+    realizado = ref_df.loc[ref_df["_dt"].dt.day <= corte, "total"].sum()
+
+    anteriores = df[df["_mes"] < ref]
+    recorte = anteriores.loc[anteriores["_dt"].dt.day <= corte].groupby("_mes")["total"].sum()
+
+    if len(recorte) < MIN_MESES_BASE or recorte.mean() <= 0:
+        return {"ref": ref, "parcial": parcial, "corte": corte, "realizado": realizado,
+                "sem_base": True, "meses": len(recorte)}
+
+    media = recorte.mean()
+    return {
+        "ref": ref,
+        "parcial": parcial,
+        "corte": corte,
+        "dias_no_mes": dias_no_mes,
+        "realizado": realizado,
+        "media": media,
+        "minimo": recorte.min(),
+        "maximo": recorte.max(),
+        "meses": len(recorte),
+        "delta": realizado / media - 1,
+        "projecao": realizado / corte * dias_no_mes if parcial and corte else None,
+        "sem_base": False,
+    }
+
+
+def _veredito(s: dict) -> tuple[str, str, str, str]:
+    """
+    Ícone, cor, o trecho que leva a cor e o trecho que não leva.
+
+    Sem matiz nova: acima é Dinheiro, abaixo é Economia, e o patamar normal
+    não tem cor nenhuma — é justamente o estado que não pede ação. A cor fica
+    só no veredito; a ressalva sai em tinta de leitura, senão a frase inteira
+    vira vermelho e o vermelho para de significar alguma coisa.
+    """
+    pct = abs(s["delta"]) * 100
+    if s["realizado"] > s["maximo"]:
+        return "trending_up", DINHEIRO, f"{pct:.0f}% acima da média", " — e acima de todo mês anterior"
+    if s["realizado"] < s["minimo"]:
+        return "trending_down", ECONOMIA, f"{pct:.0f}% abaixo da média", " — e abaixo de todo mês anterior"
+    if s["delta"] >= 0.02:
+        return "trending_up", DINHEIRO, f"{pct:.0f}% acima da média", ", dentro da faixa dos outros meses"
+    if s["delta"] <= -0.02:
+        return "trending_down", ECONOMIA, f"{pct:.0f}% abaixo da média", ", dentro da faixa dos outros meses"
+    return "trending_flat", INK_MUTE, "no mesmo patamar dos meses anteriores", ""
+
+
+def show_month_signal(orders_df: pd.DataFrame):
+    """
+    A primeira frase da tela responde "gastamos demais este mês?".
+
+    Não é cartão nem tile: é uma frase e a sua nota de rodapé. E não repete
+    nenhum número do bloco de KPIs logo abaixo — o que ele traz é a
+    comparação, não o total.
+    """
+    s = month_signal(orders_df)
+    if s is None:
+        return
+
+    nome = f"{MESES_EXTENSO[s['ref'].month]} de {s['ref'].year}"
+
+    if s["sem_base"]:
+        st.caption(
+            f"Ainda não dá para dizer se {nome} está caro: são precisos pelo menos "
+            f"{MIN_MESES_BASE} meses anteriores para formar uma média, e há {s['meses']}."
+        )
+        return
+
+    icone, cor, veredito, ressalva = _veredito(s)
+    st.markdown(
+        f'<p style="font-size:20px;font-weight:600;letter-spacing:-0.1px;margin:0 0 .25rem">'
+        f'<span style="font-family:Material Symbols Rounded;color:{cor};'
+        f'font-size:22px;line-height:1;vertical-align:-4px;margin-right:.4rem">{icone}</span>'
+        f'{nome} está <span style="color:{cor}">{veredito}</span>{ressalva}.</p>',
+        unsafe_allow_html=True,
+    )
+
+    ate = (f"até o dia {s['corte']}" if s["parcial"] else "no mês fechado")
+    nota = (
+        f"Média dos {s['meses']} meses anteriores {ate}: "
+        f"**{_brl(s['media'], md=True)}** · faixa de **{_brl(s['minimo'], md=True)}** a "
+        f"**{_brl(s['maximo'], md=True)}**"
+    )
+    if s["projecao"]:
+        nota += f"　·　No ritmo atual o mês fecha em **{_brl(s['projecao'], md=True)}** — estimativa"
+    st.caption(nota)
 
 
 # ── Chart helpers ─────────────────────────────────────────────────────────────
@@ -393,6 +542,9 @@ def show_kpis(df: pd.DataFrame):
 def _cromo(fig):
     """Grade/eixos em fio recessivo e fundo transparente sobre o tema."""
     fig.update_layout(
+        # ponto no milhar, vírgula no decimal — vale para tick de eixo e hover,
+        # que são formatados pelo próprio Plotly, fora do alcance do _brl()
+        separators=",.",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color=INK_MUTE),
@@ -430,26 +582,31 @@ def _bar(df, x, y, title, color=DINHEIRO, text=None, xtype=None, orient=None):
     return _cromo(fig)
 
 
-def _barra_ou_numero(alvo, df, x, y, title, color=DINHEIRO, text=None, **kw):
+def _nota_periodo_unico(df, x) -> bool:
     """
-    Uma barra só não é gráfico — é um número.
+    Um período só no filtro (o recorte padrão, mês corrente): nenhum dos dois
+    gráficos do par é gráfico — são duas barras gigantes repetindo valores que
+    o bloco de KPIs já mostra.
 
-    Com o filtro padrão (ano + mês corrente) os painéis "Por ano" e "Por mês"
-    reduziam a uma barra gigante ocupando meia tela para repetir um valor que
-    já está no KPI do topo. Nesse caso mostra o número direto.
+    A nota sai UMA vez, na largura inteira, e por isso é chamada ANTES de abrir
+    as colunas: emitida dentro de cada uma, a mesma frase aparecia duas vezes
+    lado a lado.
+
+    (df[col].iloc[0] e não df.iloc[0][col]: a segunda forma vira Series com
+    dtype comum e o ano inteiro saía "2026.0".)
     """
-    if len(df) == 1:
-        # Um período só: o valor já está no bloco de KPIs no topo da tela.
-        # Repetir aqui seria dizer o mesmo duas vezes — em vez disso o painel
-        # explica por que está vazio e aponta para onde há o que ver.
-        # (df[col].iloc[0] e não df.iloc[0][col]: a segunda forma vira Series
-        # com dtype comum e o ano inteiro saía "2026.0".)
-        alvo.caption(
-            f"Só **{df[x].iloc[0]}** no filtro atual — o total está nos "
-            "indicadores acima. Para comparar períodos, amplie o filtro; para "
-            "ver o padrão dentro do mês, use *Dia da semana* ou *Heatmap*."
-        )
-        return
+    if len(df) != 1:
+        return False
+    st.caption(
+        f"Só **{df[x].iloc[0]}** no filtro atual — o total está nos "
+        "indicadores acima. Para comparar períodos, amplie o filtro; para "
+        "ver o padrão dentro do mês, use *Dia da semana* ou *Heatmap*."
+    )
+    return True
+
+
+def _barra(alvo, df, x, y, title, color=DINHEIRO, text=None, **kw):
+    """Uma barra do par lado a lado, dentro da coluna que a recebe."""
     alvo.plotly_chart(
         _bar(df, x, y, title, color=color, text=text, **kw), width="stretch"
     )
@@ -500,12 +657,14 @@ def temporal_charts(df: pd.DataFrame):
             .sort_values("year")
         )
         by_year["year"] = by_year["year"].astype(int)
+        if _nota_periodo_unico(by_year, "year"):
+            return
         c1, c2 = st.columns(2)
-        _barra_ou_numero(c1, by_year, "year", "total", "Gasto por ano (R$)",
-                         text=by_year["total"].apply(lambda v: f"R${v:,.0f}"),
-                         xtype="category")
-        _barra_ou_numero(c2, by_year, "year", "pedidos", "Pedidos por ano",
-                         color=PEDIDOS, text=by_year["pedidos"], xtype="category")
+        _barra(c1, by_year, "year", "total", "Gasto por ano (R$)",
+               text=by_year["total"].apply(lambda v: _brl(v, 0)),
+               xtype="category")
+        _barra(c2, by_year, "year", "pedidos", "Pedidos por ano",
+               color=PEDIDOS, text=by_year["pedidos"], xtype="category")
 
     elif aba == "Por mês":
         mode = st.radio("Visualização", ["Série histórica (mês/ano)", "Sazonal (Jan–Dez)"],
@@ -524,10 +683,12 @@ def temporal_charts(df: pd.DataFrame):
                 .reset_index()
                 .sort_values("period")
             )
+            if _nota_periodo_unico(by_period, "period"):
+                return
             c1, c2 = st.columns(2)
-            _barra_ou_numero(c1, by_period, "period", "total", "Gasto por mês (R$)")
-            _barra_ou_numero(c2, by_period, "period", "pedidos", "Pedidos por mês",
-                             color=PEDIDOS)
+            _barra(c1, by_period, "period", "total", "Gasto por mês (R$)")
+            _barra(c2, by_period, "period", "pedidos", "Pedidos por mês",
+                   color=PEDIDOS)
         else:
             by_month = (
                 dfd.groupby("month")
@@ -659,7 +820,7 @@ def price_distribution(df: pd.DataFrame):
     )
     c2.plotly_chart(
         _bar(pr_data, "price_range", "total", "Gasto total por faixa (R$)",
-             text=pr_data["total"].apply(lambda v: f"R${v:,.0f}")),
+             text=pr_data["total"].apply(lambda v: _brl(v, 0))),
         width="stretch",
     )
 
@@ -758,12 +919,12 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
     home_total = total_pago - total_saved
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Economia total",      f"R$ {total_saved:,.2f}",
+    c1.metric("Economia total",      _brl(total_saved),
               f"−{(total_saved/total_pago*100) if total_pago else 0:.0f}% do que pagou",
               delta_color="inverse")
-    c2.metric("Custo cozinhando",    f"R$ {home_total:,.2f}")
-    c3.metric("Economia nos pratos", f"R$ {food_saved:,.2f}")
-    c4.metric("Taxas evitadas",      f"R$ {fees:,.2f}")
+    c2.metric("Custo cozinhando",    _brl(home_total))
+    c3.metric("Economia nos pratos", _brl(food_saved))
+    c4.metric("Taxas evitadas",      _brl(fees))
 
     # Economia agregada por tipo de prato
     by_cat = (
@@ -777,7 +938,7 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
     por_econ = by_cat.sort_values("economia")
     f1 = _bar(por_econ, "economia", "dish_cat",
               "Economia estimada por tipo de prato (R$)", color=ECONOMIA,
-              text=por_econ["economia"].apply(lambda v: f"R${v:,.0f}"), orient="h")
+              text=por_econ["economia"].apply(lambda v: _brl(v, 0)), orient="h")
     f1.update_layout(yaxis_title="")
     c1.plotly_chart(f1, width="stretch")
 
@@ -788,7 +949,7 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
     fig2 = px.bar(
         comp, x="cenário", y="valor", title="Pago no delivery × custo em casa (R$)",
         template=PLOTLY_TEMPLATE,
-        text=comp["valor"].apply(lambda v: f"R${v:,.0f}"),
+        text=comp["valor"].apply(lambda v: _brl(v, 0)),
         color="cenário", color_discrete_sequence=[DINHEIRO, ECONOMIA],
     )
     fig2.update_traces(textposition="outside", textfont=dict(color=INK_MUTE),
@@ -810,16 +971,16 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
         disp = top.copy()
         disp["pct"] = (disp["pct"] * 100).round(0).astype(int).astype(str) + "%"
         for col in ("pago", "custo_casa", "economia"):
-            disp[col] = disp[col].apply(lambda v: f"R$ {v:,.2f}")
+            disp[col] = disp[col].apply(_brl)
         disp.columns = ["Prato", "Tipo", "Qtd", "Pago (X)",
                         "Custo em casa", "Economia (Y)", "% economia"]
         st.dataframe(disp, width="stretch", hide_index=True)
 
     st.caption(
         f"Com os percentuais atuais, fazer esses pratos em casa teria custado "
-        f"~R\\$ {home_food:,.2f} em ingredientes vs. R\\$ {sav['paid'].sum():,.2f} pagos "
-        f"no delivery — economia de **R\\$ {food_saved:,.2f}** só nos pratos, mais "
-        f"R$ {fees:,.2f} de taxas evitadas."
+        f"~{_brl(home_food, md=True)} em ingredientes vs. {_brl(sav['paid'].sum(), md=True)} pagos "
+        f"no delivery — economia de **{_brl(food_saved, md=True)}** só nos pratos, mais "
+        f"{_brl(fees, md=True)} de taxas evitadas."
     )
 
 
@@ -849,7 +1010,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
             # barra o par "gasto | pedidos" fica igual ao resto do dashboard.
             c1.plotly_chart(
                 _bar(by_cat, "category", "total", "Gasto por categoria (R$)",
-                     text=by_cat["total"].apply(lambda v: f"R${v:,.0f}")),
+                     text=by_cat["total"].apply(lambda v: _brl(v, 0))),
                 width="stretch",
             )
             c2.plotly_chart(
@@ -884,7 +1045,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
 
         por_valor = by_rest.sort_values("total")
         f2 = _bar(por_valor, "total", "restaurant_name", "Por valor gasto (R$)",
-                  text=por_valor["total"].apply(lambda v: f"R${v:,.0f}"), orient="h")
+                  text=por_valor["total"].apply(lambda v: _brl(v, 0)), orient="h")
         f2.update_layout(yaxis_title="")
         c2.plotly_chart(f2, width="stretch")
 
@@ -946,16 +1107,16 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
             )
         )
         fig.update_layout(
-            title=f"Distribuição do que você pagou (total R$ {total_paid:,.2f})",
+            title=f"Distribuição do que você pagou (total {_brl(total_paid)})",
             template=PLOTLY_TEMPLATE,
             showlegend=True,
             legend=dict(orientation="h", y=-0.05, font=dict(color=INK_MUTE)),
         )
         st.plotly_chart(_cromo(fig), width="stretch")
         st.caption(
-            f"Itens (bruto): R\\$ {total_subtotal:,.2f}  ·  "
-            f"Economia em cupons: −R\\$ {total_discount:,.2f}  →  "
-            f"Itens líquidos: R\\$ {items_net:,.2f}. "
+            f"Itens (bruto): {_brl(total_subtotal, md=True)}  ·  "
+            f"Economia em cupons: −{_brl(total_discount, md=True)}  →  "
+            f"Itens líquidos: {_brl(items_net, md=True)}. "
             "O cupom **não** é custo — abate o valor dos itens."
         )
 
@@ -1160,6 +1321,10 @@ def main():
     filtered_items = items_df[items_df["order_id"].isin(filtered["id"])] if not items_df.empty else pd.DataFrame()
 
     st.divider()
+    # Sinal antes dos KPIs, e sobre o histórico INTEIRO (orders_df, não
+    # filtered): a pergunta que abre a tela é "gastamos demais este mês?",
+    # e ela não tem resposta dentro do recorte do próprio mês.
+    show_month_signal(orders_df)
     show_kpis(filtered)
     st.divider()
     temporal_charts(filtered)

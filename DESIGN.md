@@ -15,6 +15,8 @@ colors:
   chart-grid: "#22252e"
   chart-axis: "#3a3f4b"
   link: "#5b9df0"
+  scrollbar-thumb: "#2b323e"
+  scrollbar-thumb-hover: "#3a4250"
 typography:
   display:
     fontFamily: "Source Sans, system-ui, -apple-system, sans-serif"
@@ -52,8 +54,16 @@ typography:
     fontWeight: 400
     lineHeight: "22.4px"
     letterSpacing: "normal"
+  icon:
+    fontFamily: "Material Symbols Rounded"
+    fontSize: "22px"
+    fontWeight: 400
+    lineHeight: "1"
+    letterSpacing: "normal"
 rounded:
   md: "8px"
+  chrome-scrollbar: "6px"
+  chrome-focus: "4px"
 spacing:
   section-above: "2.5rem"
   section-below: "0.75rem"
@@ -183,12 +193,21 @@ de leitura, uma fonte que chama atenção para si rouba do número.
   aperta os dígitos para o número ler como uma unidade, não como uma fileira.
 - **Body** (400, 14px/22.4px): texto corrido, legendas, ajuda.
 - **Label** (400, 14px, opacidade 0.72): rótulo de KPI e de campo.
+- **Icon** (Material Symbols Rounded, 22px): o ícone é uma fonte, não tipo de
+  leitura. É o mesmo conjunto que o Streamlit carrega para o parâmetro
+  `icon=`; num trecho de HTML próprio, a família vai declarada à mão.
 
 ### Named Rules
 
 **A Regra do Rótulo que Recua.** No par rótulo/valor, o rótulo vai a 72% de
 opacidade e o valor fica em 700. Se os dois saem no mesmo tom, o olho tem que
 escolher — e a varredura para.
+
+**A Regra da Moeda.** Dinheiro sai em formato brasileiro — ponto no milhar,
+vírgula no decimal (`R$ 1.724,05`). Vale para texto, rótulo de barra, tick de
+eixo e hover: os três últimos são formatados pelo Plotly, que precisa de
+`separators=",."` no layout. O padrão do Python é o americano, e uma tela em
+português com `R$ 1,724.05` denuncia que ninguém olhou.
 
 **A Regra do Dígito.** `tabular-nums` só onde números se alinham na vertical
 (tabela, ticks de eixo). No valor grande e solto do KPI, figuras
@@ -238,6 +257,11 @@ Um único raio para tudo: 8px (`{rounded.md}`) em botões, campos, seletores e
 blocos. Não há escala de raio, e a ausência é a decisão — variar curvatura
 entre controles do mesmo peso inventa hierarquia onde não existe.
 
+A exceção é o cromo que o navegador desenha e o design system só tinge: o
+polegar da barra de rolagem (`{rounded.chrome-scrollbar}`) e o anel de foco
+(`{rounded.chrome-focus}`) seguem a curvatura da própria peça do navegador, não
+a do sistema. São dois valores, ambos fora do conteúdo.
+
 Marcas de dado têm respiro de 2px na cor da superfície entre vizinhas (barras
 adjacentes, células de heatmap, fatias de rosca). É separação por vão, não por
 borda desenhada.
@@ -253,8 +277,10 @@ vermelho. A interface se anuncia sem gritar.
 - **Primary:** preenchimento Dinheiro (`#ea1d2c`) com texto branco, borda de
   1px da mesma cor, padding 4px 12px. Reservado para a ação que busca dados
   novos ("Coletar / atualizar pedidos"). **Uma por tela.**
-- **Secondary:** superfície elevada (`#10151e`) com fio `#1e242e` e tinta
-  primária. Todo o resto — Recarregar, Limpar filtros, Salvar nome.
+- **Secondary:** superfície elevada (`{colors.surface-raised}`) com tinta
+  primária. Todo o resto — Recarregar, Limpar filtros, Salvar nome. O fio segue
+  a superfície em que o botão está: `{colors.border-sidebar}` na sidebar,
+  `{colors.border-hairline}` no conteúdo.
 - **Ícone:** Material Symbols pelo parâmetro `icon=`, nunca glifo dentro do
   rótulo.
 - **Focus:** anel de 2px em Dinheiro com 2px de deslocamento.
@@ -275,6 +301,21 @@ O componente que carrega o propósito do produto. Sem caixa, sem borda, sem
 fundo: rótulo em 14px a 72% de opacidade sobre o valor em 700/26.4px com
 tracking −0.02em. A ausência de moldura é intencional — o número é a figura, e
 uma borda em volta o transformaria em cartão.
+
+### Signal Line
+A primeira frase da tela, acima dos KPIs: responde "gastamos demais este mês?"
+antes que alguém precise ler um gráfico. Não é cartão nem tile — é uma frase em
+Headline com a sua nota de rodapé em Body recuado, sem fundo e sem moldura.
+
+A cor fica **só no veredito** ("10% acima da média"): acima é Dinheiro, abaixo é
+Economia, e o patamar normal não recebe cor nenhuma — é o estado que não pede
+ação. A ressalva que vem depois ("dentro da faixa dos outros meses") sai em
+tinta de leitura; pintar a frase inteira faz o vermelho parar de significar
+alguma coisa.
+
+Ícone de tendência em Material Symbols, na cor do veredito, colado na frase.
+Nenhum número deste bloco se repete no bloco de KPIs logo abaixo — o que ele
+traz é a comparação, não o total.
 
 ### Chart Frame
 Todo gráfico compartilha o mesmo cromo: fundo transparente, grade
@@ -297,6 +338,8 @@ hover carregam o valor.
 - **Do** montar só o painel selecionado; painel oculto tem largura zero e
   quebra o cálculo de área do gráfico.
 - **Do** declarar na tela quando o número é estimativa.
+- **Do** comparar períodos como-por-como: o mês parcial vai contra o mesmo
+  recorte de dias dos meses anteriores, nunca contra meses cheios.
 
 ### Don't:
 - **Don't** introduzir um quarto matiz de dado. Acima de três categorias,
@@ -311,3 +354,5 @@ hover carregam o valor.
   acima de 8 marcas, ou abaixo de 8% de uma fatia, o rótulo é recortado.
 - **Don't** deixar mais de uma ação preenchida em vermelho por tela.
 - **Don't** repetir num painel um valor que o bloco de KPIs já mostra.
+- **Don't** emitir a mesma legenda dentro de cada coluna de um par: a nota que
+  vale para a linha inteira sai uma vez, antes de abrir as colunas.
