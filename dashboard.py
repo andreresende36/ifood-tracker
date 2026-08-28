@@ -1031,15 +1031,20 @@ def _items_savings(items_df: pd.DataFrame, scale: float,
     return out
 
 
-# A estimativa não tem um valor: tem uma faixa. Estes são os dois extremos do
-# que os percentuais por tipo de prato admitem, e o meio é o que a tela chama
-# de "cerca de". Eram as pontas do antigo slider de otimismo — que ofereceu ao
-# usuário arrastar a própria economia até um número confortável, o oposto de
-# um extrato honesto. A faixa diz a mesma incerteza sem pedir que alguém
-# negocie com ela.
-ESCALA_CONSERVADORA = 0.5
+# Escala padrão dos percentuais por tipo de prato: 100% do valor tabelado em
+# DISH_CATEGORIES. O controle de otimismo da seção move este número entre 50%
+# e 150%.
 ESCALA_CENTRAL = 1.0
-ESCALA_OTIMISTA = 1.5
+
+# Chave do controle de otimismo. A linha do topo é desenhada ANTES da seção que
+# tem o slider, então lê o valor pela session_state e cai no padrão na primeira
+# renderização da sessão.
+OTIMISMO_KEY = "otimismo_estimativa"
+
+
+def _escala_atual() -> float:
+    """O otimismo escolhido na seção, como fator. 100% na primeira carga."""
+    return st.session_state.get(OTIMISMO_KEY, 100) / 100
 
 
 def _economia_evitavel(df: pd.DataFrame, items_df: pd.DataFrame,
@@ -1067,13 +1072,6 @@ def _economia_evitavel(df: pd.DataFrame, items_df: pd.DataFrame,
     return sav, total_saved, food_saved, fees, total_pago - total_saved, total_pago
 
 
-def _faixa_economia(df: pd.DataFrame, items_df: pd.DataFrame):
-    """Os dois extremos da estimativa: (conservador, otimista)."""
-    baixo = _economia_evitavel(df, items_df, ESCALA_CONSERVADORA)[1]
-    alto  = _economia_evitavel(df, items_df, ESCALA_OTIMISTA)[1]
-    return baixo, alto
-
-
 def show_savings_line(df: pd.DataFrame, items_df: pd.DataFrame):
     """
     A segunda pergunta da sessão — "dava para ter cozinhado?" — respondida no
@@ -1085,7 +1083,7 @@ def show_savings_line(df: pd.DataFrame, items_df: pd.DataFrame):
     """
     if df.empty or items_df.empty:
         return
-    _, total_saved, _, _, _, total_pago = _economia_evitavel(df, items_df)
+    _, total_saved, _, _, _, total_pago = _economia_evitavel(df, items_df, _escala_atual())
     if total_pago <= 0:
         return
     pct = total_saved / total_pago * 100
@@ -1118,25 +1116,26 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
         "**Taxas de entrega + serviço** são 100% evitáveis e entram por cima."
     )
 
+    scale = st.slider(
+        "Otimismo da estimativa (ajusta todos os percentuais)",
+        min_value=50, max_value=150, value=100, step=10, format="%d%%",
+        key=OTIMISMO_KEY,
+        help="100% = percentuais padrão por tipo de prato. 150% = mais otimista.",
+    )
     sav, total_saved, food_saved, fees, home_total, total_pago = _economia_evitavel(
-        df, items_df
+        df, items_df, scale / 100
     )
     home_food = sav["home_cost"].sum()
-    baixo, alto = _faixa_economia(df, items_df)
 
     # Dois tiles, não quatro: os outros dois decompõem o primeiro e desciam
-    # para uma fileira de números que ninguém reconcilia de cabeça. A faixa
-    # ocupa o lugar do valor único porque é o que uma estimativa honestamente é.
+    # para uma fileira de números que ninguém reconcilia de cabeça.
     c1, c2 = st.columns(2)
-    # Um "R$" só na faixa: dois cifrões na mesma string viram delimitador de
-    # LaTeX e o Streamlit come o trecho entre eles — a faixa saía "R 475 – R 1.130".
-    c1.metric("Economia estimada", f"{_brl(baixo, 0)} – {_brl(alto, 0).removeprefix('R$ ')}")
+    c1.metric("Economia estimada", _brl(total_saved))
     c2.metric("Custo cozinhando",  _brl(home_total))
     st.caption(
-        f"No meio da faixa: **{_brl(total_saved, md=True)}** "
-        f"　·　{_brl(food_saved, md=True)} de economia estimada na comida "
+        f"{_brl(food_saved, md=True)} de economia estimada na comida "
         f"　·　{_brl(fees, md=True)} de taxas, evitáveis por inteiro — essa "
-        "parte não é estimativa."
+        "parte não é estimativa, e o controle acima não a move."
     )
 
     # Economia agregada por tipo de prato

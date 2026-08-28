@@ -171,7 +171,7 @@
       { "name": "A Regra do Nível", "body": "Seção é h2, bloco é h3, e o CSS de ritmo mira os dois. Uma seção escrita como h3 herda o ritmo de bloco e o ritmo de seção vira regra que não casa com nada — foi o que aconteceu com as seis seções originais, todas em st.subheader.", "section": "typography" },
       { "name": "A Regra da Base", "body": "Existe UMA fonte de verdade para o que foi pago: total. Toda composição é derivada dela, nunca remontada do preço de tabela dos itens — promoção do restaurante e benefício de clube abatem por fora e não aparecem em coupon_discount. Em 120 de 259 pedidos a conta não fechava.", "section": "components" },
       { "name": "A Regra do que Não Chegou", "body": "Pedido cancelado, recusado ou de status desconhecido não é gasto e não entra em soma de dinheiro. Quando o recorte os contém, a tela diz quantos são e quanto somam.", "section": "components" },
-      { "name": "A Regra da Faixa", "body": "Onde o número é estimativa, a tela mostra a faixa e não um controle. Um slider que deixa arrastar a própria economia até um valor confortável é convite a negociar com o dado.", "section": "components" },
+      { "name": "A Regra do Estimado e do Apurado", "body": "Num bloco que mistura os dois, a tela diz qual é qual. A economia nos pratos é estimativa e responde ao controle de otimismo; a taxa de entrega e serviço é valor apurado e não se move com ele — e a legenda declara isso.", "section": "components" },
       { "name": "A Regra do Limiar Certo", "body": "O vermelho da marca vive nos dois lados de uma fronteira: como marca de dado o limiar é 3:1 e #ea1d2c passa; como fundo de texto o limiar é 4,5:1 e ele reprova. A paleta carrega os dois tons e a escolha é pelo papel.", "section": "colors" },
       { "name": "A Regra da Moeda", "body": "Dinheiro sai em formato brasileiro — ponto no milhar, vírgula no decimal (R$ 1.724,05). Vale para texto, rótulo de barra, tick de eixo e hover; os três últimos são formatados pelo Plotly, que precisa de separators=\",.\" no layout. O padrão do Python é o americano, e uma tela em português com R$ 1,724.05 denuncia que ninguém olhou.", "section": "typography" }
     ],
@@ -182,7 +182,7 @@
       "Do usar Material Symbols pelo parâmetro icon= dos componentes.",
       "Do escapar R\\$ em texto markdown — dois cifrões na mesma string viram delimitador de LaTeX e o Streamlit engole o trecho entre eles.",
       "Do montar só o painel selecionado; painel oculto tem largura zero e quebra o cálculo de área do gráfico.",
-      "Do declarar na tela quando o número é estimativa, e mostrar a faixa em vez de um controle que a ajuste.",
+      "Do declarar na tela quando o número é estimativa, e separar na legenda o que a estimativa move do que é valor apurado.",
       "Do derivar toda composição de dinheiro do total, e conferir que a soma fecha antes de desenhar.",
       "Do comparar períodos como-por-como: o mês parcial vai contra o mesmo recorte de dias dos meses anteriores, nunca contra meses cheios.",
       "Do manter o veredito das perguntas da sessão no topo, em uma frase cada, com a profundidade nas seções abaixo."

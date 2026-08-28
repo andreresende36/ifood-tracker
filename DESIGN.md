@@ -252,10 +252,10 @@ fatias contradiziam em R$ 1.002,74.
 desconhecido não é gasto e não entra em soma de dinheiro. Quando o recorte os
 contém, a tela diz quantos são e quanto somam, em vez de escondê-los.
 
-**A Regra da Faixa.** Onde o número é estimativa, a tela mostra a faixa e não
-um controle. Um slider que deixa arrastar a própria economia até um valor
-confortável é convite a negociar com o dado — o oposto de um extrato honesto.
-A incerteza se declara mostrando os dois extremos.
+**A Regra do Estimado e do Apurado.** Num bloco que mistura os dois, a tela
+diz qual é qual. A economia nos pratos é estimativa e responde ao controle de
+otimismo; a taxa de entrega e serviço é valor apurado e não se move com ele —
+e a legenda declara isso, para o controle não parecer governar a conta inteira.
 
 ## Layout
 
@@ -373,7 +373,7 @@ traz é a comparação, não o total.
 A irmã da Signal Line, logo abaixo dos KPIs: responde a segunda pergunta da
 sessão — "dava para ter cozinhado?" — sem obrigar a rolar até a seção.
 
-O valor central sai como "cerca de"; a faixa completa vive no tile da seção.
+O valor sai como "cerca de" e acompanha o controle de otimismo da seção.
 Corpo de texto em tinta recuada, com o valor evitável em Economia e peso 600:
 pesa mais que a legenda de cupons e taxas logo acima, menos que o sinal do mês
 logo abaixo do título. Diz que é estimativa e aponta para a conta completa.
@@ -421,8 +421,8 @@ título do próprio gráfico.
   delimitador de LaTeX e o Streamlit engole o trecho entre eles.
 - **Do** montar só o painel selecionado; painel oculto tem largura zero e
   quebra o cálculo de área do gráfico.
-- **Do** declarar na tela quando o número é estimativa, e mostrar a faixa em
-  vez de um controle que a ajuste.
+- **Do** declarar na tela quando o número é estimativa, e separar na legenda
+  o que a estimativa move do que é valor apurado.
 - **Do** derivar toda composição de dinheiro do `total`, e conferir que a soma
   fecha antes de desenhar.
 - **Do** comparar períodos como-por-como: o mês parcial vai contra o mesmo
