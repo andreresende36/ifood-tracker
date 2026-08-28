@@ -18,7 +18,7 @@ import shutil
 import subprocess
 import sys
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from playwright.async_api import Page, async_playwright
@@ -746,32 +746,53 @@ def _cents(value) -> float:
         return 0.0
 
 
+# Brasil não tem mais horário de verão, então -3 é constante o ano todo.
+BRASILIA = timezone(timedelta(hours=-3))
+
+
 def _parse_ts(ts) -> datetime | None:
+    """
+    Converte o timestamp do iFood para hora de parede de Brasília (naive).
+
+    ATENÇÃO: o iFood manda os dois formatos NO MESMO campo createdAt —
+    uns em UTC ("2026-07-31T23:27:12.815Z"), outros já em local
+    ("2026-08-26T21:38:43-03:00"). Antes o tzinfo era simplesmente
+    descartado, então os que vinham em UTC ficavam 3h adiantados e um
+    jantar das 20h era classificado como "Madrugada".
+    """
     if ts is None:
         return None
     if isinstance(ts, (int, float)):
         if ts > 1e10:
             ts /= 1000
-        return datetime.fromtimestamp(ts)
+        # tz explícito: não depender do fuso da máquina que roda o scraper
+        return datetime.fromtimestamp(ts, BRASILIA).replace(tzinfo=None)
     if not isinstance(ts, str):
         return None
-    # ISO 8601 com timezone (ex.: "2026-06-03T20:12:00-03:00")
+    # ISO 8601 com timezone (ex.: "...-03:00" ou "...Z")
     try:
         dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        # Descarta tzinfo — mantém hora de parede local (offset já é BR)
-        return dt.replace(tzinfo=None)
     except ValueError:
         pass
-    for fmt in [
-        "%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ",
-        "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%d %H:%M:%S", "%Y-%m-%d",
-        "%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y",
+    else:
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(BRASILIA)
+        return dt.replace(tzinfo=None)
+    for fmt, utc in [
+        ("%Y-%m-%dT%H:%M:%S.%fZ", True), ("%Y-%m-%dT%H:%M:%SZ", True),
+        ("%Y-%m-%dT%H:%M:%S.%f", False), ("%Y-%m-%dT%H:%M:%S", False),
+        ("%Y-%m-%d %H:%M:%S", False), ("%Y-%m-%d", False),
+        ("%d/%m/%Y %H:%M:%S", False), ("%d/%m/%Y %H:%M", False),
+        ("%d/%m/%Y", False),
     ]:
         try:
-            return datetime.strptime(ts, fmt)
+            dt = datetime.strptime(ts, fmt)
         except ValueError:
             continue
+        # o sufixo Z destes formatos também é UTC — precisa converter igual
+        if utc:
+            dt = dt.replace(tzinfo=timezone.utc).astimezone(BRASILIA).replace(tzinfo=None)
+        return dt
     return None
 
 
