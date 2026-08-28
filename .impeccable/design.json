@@ -1,10 +1,12 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-29T00:20:00Z",
+  "generatedAt": "2026-08-29T02:10:00Z",
   "title": "Design System: iFood Order Tracker",
   "extensions": {
     "colorMeta": {
       "dinheiro-acao": { "role": "primary", "displayName": "Dinheiro Ação", "canonical": "#c9101d" },
+      "dinheiro-texto": { "role": "primary", "displayName": "Dinheiro Texto", "canonical": "#f0787f" },
+      "economia-texto": { "role": "tertiary", "displayName": "Economia Texto", "canonical": "#3fbf90" },
       "dinheiro": {
         "role": "primary",
         "displayName": "Dinheiro",
@@ -172,7 +174,8 @@
       { "name": "A Regra da Base", "body": "Existe UMA fonte de verdade para o que foi pago: total. Toda composição é derivada dela, nunca remontada do preço de tabela dos itens — promoção do restaurante e benefício de clube abatem por fora e não aparecem em coupon_discount. Em 120 de 259 pedidos a conta não fechava.", "section": "components" },
       { "name": "A Regra do que Não Chegou", "body": "Pedido cancelado, recusado ou de status desconhecido não é gasto e não entra em soma de dinheiro. Quando o recorte os contém, a tela diz quantos são e quanto somam.", "section": "components" },
       { "name": "A Regra do Estimado e do Apurado", "body": "Num bloco que mistura os dois, a tela diz qual é qual. A economia nos pratos é estimativa e responde ao controle de otimismo; a taxa de entrega e serviço é valor apurado e não se move com ele — e a legenda declara isso.", "section": "components" },
-      { "name": "A Regra do Limiar Certo", "body": "O vermelho da marca vive nos dois lados de uma fronteira: como marca de dado o limiar é 3:1 e #ea1d2c passa; como fundo de texto o limiar é 4,5:1 e ele reprova. A paleta carrega os dois tons e a escolha é pelo papel.", "section": "colors" },
+      { "name": "A Regra do Limiar Certo", "body": "Cada matiz tem TRÊS papéis e três limiares: marca de dado (3:1, #ea1d2c / #199e70), fundo de ação com texto branco (4,5:1, #c9101d), texto sobre superfície escura (4,5:1, #f0787f / #3fbf90). A escolha é pelo papel, nunca pela aparência — o erro já foi cometido duas vezes: texto em #ea1d2c (4,24) e depois em #c9101d (3,22).", "section": "colors" },
+      { "name": "A Regra da Costura", "body": "O Streamlit emite lang=en, ARIA em inglês, estado de seleção só na cor e nenhum marco main. static/localize.html roda no documento pai e corrige tudo isso. Duas pegadinhas: o servidor estático fixa o tamanho do arquivo no start (editar com o servidor no ar serve o conteúdo truncado, e o script quebra no meio sem erro visível) e o navegador guarda /app/static/ com cache longo — daí o ?v=<hash> na URL do iframe.", "section": "components" },
       { "name": "A Regra da Moeda", "body": "Dinheiro sai em formato brasileiro — ponto no milhar, vírgula no decimal (R$ 1.724,05). Vale para texto, rótulo de barra, tick de eixo e hover; os três últimos são formatados pelo Plotly, que precisa de separators=\",.\" no layout. O padrão do Python é o americano, e uma tela em português com R$ 1,724.05 denuncia que ninguém olhou.", "section": "typography" }
     ],
     "dos": [
@@ -197,6 +200,8 @@
       "Don't deixar a barra de ferramentas do Plotly visível.",
       "Don't somar em dinheiro pedido que não foi entregue.",
       "Don't pôr texto branco sobre dinheiro (#ea1d2c): para fundo de texto o tom é dinheiro-acao (#c9101d).",
+      "Don't usar #ea1d2c ou #c9101d como cor de TEXTO sobre a superfície escura: os dois reprovam. O tom é dinheiro-texto (#f0787f).",
+      "Don't comunicar estado só por cor. Junto vai peso, ícone ou atributo.",
       "Don't interpolar valor em str.contains sem regex=False — nome de restaurante e de prato traz parêntese, + e * o tempo todo.",
       "Don't usar textposition outside em barra horizontal: a maior barra empurra o rótulo para fora da área de plotagem e ele sai recortado no estreito.",
       "Don't desenhar borda em volta de marca de dado; o respiro de 2px na cor da superfície faz esse trabalho.",

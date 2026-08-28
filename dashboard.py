@@ -4,6 +4,7 @@ iFood Order History Dashboard
 Run: streamlit run dashboard.py
 """
 
+import hashlib
 import io
 import os
 import subprocess
@@ -76,6 +77,35 @@ st.markdown("""
        o valor do KPI (grande e solto) não — ali fica proporcional. */
     div[data-testid="stDataFrame"] { font-variant-numeric: tabular-nums; }
 
+    /* Atalho de teclado, criado pelo localize.html. Fica fora da tela até
+       receber foco — a sidebar tem ~340 nós antes do primeiro número. */
+    #pular-para-conteudo {
+        position: absolute; left: -9999px; top: 0; z-index: 9999;
+        background: #161b24; color: #e6e8ec; border: 1px solid #242a35;
+        border-radius: 8px; padding: 8px 12px; font-size: 14px; text-decoration: none;
+    }
+    #pular-para-conteudo:focus { left: 8px; top: 8px; }
+
+    /* O segmento ativo do seletor é TEXTO vermelho sobre uma tinta de 10% —
+       não é superfície preenchida. Com o tom de ação (#c9101d) dava 3,09:1;
+       com o tom de texto, 6,7:1. E ganha peso 600, para o estado não depender
+       só da cor. */
+    [data-testid="stBaseButton-segmented_controlActive"] { color: #f0787f !important; }
+    [data-testid="stBaseButton-segmented_controlActive"] p { font-weight: 600; }
+
+    /* O valor do slider flutua sobre a superfície, não sobre o polegar — em
+       #c9101d dava 3,22:1 como texto. */
+    [data-testid="stSliderThumbValue"] { color: #f0787f; }
+
+    /* Texto e placeholder do campo de data vinham a 40% e 60% de opacidade:
+       3,32:1 e 4,79:1. Placeholder é texto para a WCAG 1.4.3. */
+    [data-testid="stDateInputField"] { color: rgba(230, 232, 236, 0.72) !important; }
+    [data-testid="stDateInputField"]::placeholder { color: rgba(230, 232, 236, 0.72); }
+
+    /* Raio dos chips de filtro: o BaseWeb entrega 6.08px, fora da escala.
+       O sistema tem um raio só. */
+    [data-baseweb="tag"] { border-radius: 8px; }
+
     /* A proibição de sombra vale para o que o Streamlit desenha sozinho: a
        barra flutuante de ferramentas da tabela vem com box-shadow de fábrica,
        e era a única sombra viva na tela inteira. */
@@ -87,6 +117,10 @@ st.markdown("""
        24×24. Os 44×44 do AAA não cabem num chip de 28px sem redesenhar o
        widget do Streamlit, e a cena de uso é desktop com mouse; 24 é o alvo. */
     [data-baseweb="tag"] { min-height: 26px; }
+    /* O polegar do slider nasce com 12x12. A área cresce, o desenho não. */
+    [data-testid="stSlider"] [role="slider"] {
+        box-sizing: content-box; padding: 6px; margin: -6px;
+    }
     [data-baseweb="tag"] span[role="presentation"] {
         min-width: 24px; min-height: 24px;
         display: inline-flex; align-items: center; justify-content: center;
@@ -103,23 +137,41 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+LOCALIZE = Path(__file__).parent / "static" / "localize.html"
+
+
 def _localize_widgets():
     """
-    Traduz textos internos dos widgets do Streamlit que não têm API
-    (ex.: 'Select all' do multiselect). Roda no DOM pai via MutationObserver.
+    Costura de idioma e acessibilidade sobre o que o Streamlit emite e não
+    expõe por API: texto interno de widget, atributos ARIA, `lang` do
+    documento, estado do seletor segmentado, marco `main` e atalho de teclado.
+    Roda no DOM pai via MutationObserver.
 
     O script vive em static/localize.html porque st.components.v1.html está
     depreciado e st.iframe recebe URL, não HTML inline. Servido pelo Streamlit
     na mesma origem, o iframe alcança window.parent.document — o que um data:
     URI (origem opaca) não permitiria.
+
+    DUAS PEGADINHAS DE CACHE, as duas custaram uma sessão de depuração:
+
+    1. O servidor estático do Streamlit fixa o tamanho do arquivo no start.
+       Editar o .html com o servidor no ar faz ele servir o conteúdo novo
+       TRUNCADO no tamanho antigo — o script quebra na metade, sem erro
+       visível no console da página. Reinicie o Streamlit após editar.
+    2. O navegador guarda /app/static/ com cache longo. Daí o `?v=` com o
+       hash do arquivo: mudou o script, muda a URL, e nem o usuário nem o
+       desenvolvedor ficam com a versão velha rodando.
     """
     # st.iframe recusa height=0 (o components.html antigo aceitava), então o
     # iframe vai com 1px dentro de um container escondido por CSS. display:none
     # não impede o iframe de carregar nem o script de rodar.
+    versao = ""
+    if LOCALIZE.exists():
+        versao = "?v=" + hashlib.sha1(LOCALIZE.read_bytes()).hexdigest()[:8]
     with st.container(key="localize_iframe"):
         # A barra inicial é obrigatória: sem ela o st.iframe não reconhece
         # como URL e embute o caminho como se fosse HTML cru.
-        st.iframe("/app/static/localize.html", height=1)
+        st.iframe(f"/app/static/localize.html{versao}", height=1)
 
 PRICE_RANGE_ORDER = [
     "Até R$30", "R$30–50", "R$50–80", "R$80–120", "Acima de R$120", "Desconhecido"
@@ -136,8 +188,16 @@ PLOTLY_TEMPLATE = "plotly_dark"
 # reprovava (amarelo↔vermelho ΔE 4.4, violeta↔azul 1.9). Mais que 3 categorias
 # vira barra, não fatia.
 DINHEIRO = "#ea1d2c"   # gasto, ticket, valor pago  (vermelho iFood, do logo)
+# O mesmo vermelho tem três papéis e três limiares de contraste, e usar o tom
+# errado no papel errado reprova:
+#   marca de dado   → #ea1d2c sobre #0e1117 = 4,24:1, e o limiar é 3:1  (ok)
+#   fundo de ação   → #c9101d com texto branco = 5,87:1                 (config.toml)
+#   texto de ênfase → #ea1d2c como TEXTO = 4,24:1, e o limiar é 4,5:1   (reprova)
+# Daí este terceiro tom, só para texto vermelho sobre superfície escura.
+DINHEIRO_TEXTO = "#f0787f"   # 6,93:1 sobre #0e1117
 PEDIDOS  = "#3987e5"   # contagem de pedidos/itens
 ECONOMIA = "#199e70"   # economia e custo cozinhando em casa
+ECONOMIA_TEXTO = "#3fbf90"   # o par do DINHEIRO_TEXTO: 8,0:1 sobre #0e1117
 ACCENT = DINHEIRO      # compat: usado como cor padrão das barras
 
 # Cromo recessivo: grade e eixos a um passo da superfície, nunca competindo
@@ -210,7 +270,10 @@ def _brl(valor: float, casas: int = 2, md: bool = False) -> str:
 
 # ── Data loading ──────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=60)
+# Sem ttl: o banco é um arquivo local que só muda quando alguém coleta, e tanto
+# "Coletar" quanto "Recarregar" chamam load_data.clear(). O ttl de 60s não
+# protegia de nada e criava uma janela em que "Recarregar" podia não recarregar.
+@st.cache_data
 def load_data(profile: str = "default"):
     db = Database(profile=profile)
     if not db.db_path.exists():
@@ -539,13 +602,13 @@ def _veredito(s: dict) -> tuple[str, str, str, str]:
     """
     pct = abs(s["delta"]) * 100
     if s["realizado"] > s["maximo"]:
-        return "trending_up", DINHEIRO, f"{pct:.0f}% acima da média", " — e acima de todo mês anterior"
+        return "trending_up", DINHEIRO_TEXTO, f"{pct:.0f}% acima da média", " — e acima de todo mês anterior"
     if s["realizado"] < s["minimo"]:
-        return "trending_down", ECONOMIA, f"{pct:.0f}% abaixo da média", " — e abaixo de todo mês anterior"
+        return "trending_down", ECONOMIA_TEXTO, f"{pct:.0f}% abaixo da média", " — e abaixo de todo mês anterior"
     if s["delta"] >= 0.02:
-        return "trending_up", DINHEIRO, f"{pct:.0f}% acima da média", ", dentro da faixa dos outros meses"
+        return "trending_up", DINHEIRO_TEXTO, f"{pct:.0f}% acima da média", ", dentro da faixa dos outros meses"
     if s["delta"] <= -0.02:
-        return "trending_down", ECONOMIA, f"{pct:.0f}% abaixo da média", ", dentro da faixa dos outros meses"
+        return "trending_down", ECONOMIA_TEXTO, f"{pct:.0f}% abaixo da média", ", dentro da faixa dos outros meses"
     return "trending_flat", INK_MUTE, "no mesmo patamar dos meses anteriores", ""
 
 
@@ -654,11 +717,16 @@ def _bar(df, x, y, title, color=DINHEIRO, text=None, xtype=None, orient=None):
     return _cromo(fig)
 
 
-def _nota_periodo_unico(df, x) -> bool:
+def painel_vazio(df, x, saida: str = "para ver o padrão dentro do mês, "
+                 "use *Dia da semana* ou *Heatmap*") -> bool:
     """
+    O estado vazio da casa — um componente, não um `st.info("Sem dados")`.
+
     Um período só no filtro (o recorte padrão, mês corrente): nenhum dos dois
     gráficos do par é gráfico — são duas barras gigantes repetindo valores que
-    o bloco de KPIs já mostra.
+    o bloco de KPIs já mostra. A nota diz o que HÁ, onde está o número, e um
+    caminho nomeado — `saida` muda com a dimensão que esvaziou o painel, para
+    não sugerir "Dia da semana" a quem esbarrou numa categoria única.
 
     A nota sai UMA vez, na largura inteira, e por isso é chamada ANTES de abrir
     as colunas: emitida dentro de cada uma, a mesma frase aparecia duas vezes
@@ -671,8 +739,7 @@ def _nota_periodo_unico(df, x) -> bool:
         return False
     st.caption(
         f"Só **{df[x].iloc[0]}** no filtro atual — o total está nos "
-        "indicadores acima. Para comparar períodos, amplie o filtro; para "
-        "ver o padrão dentro do mês, use *Dia da semana* ou *Heatmap*."
+        f"indicadores acima. Para comparar, amplie o filtro; {saida}."
     )
     return True
 
@@ -746,7 +813,7 @@ def temporal_charts(df: pd.DataFrame):
             .sort_values("year")
         )
         by_year["year"] = by_year["year"].astype(int)
-        if _nota_periodo_unico(by_year, "year"):
+        if painel_vazio(by_year, "year"):
             return
         c1, c2 = st.columns(2)
         _barra(c1, by_year, "year", "total", "Gasto por ano (R$)",
@@ -772,7 +839,7 @@ def temporal_charts(df: pd.DataFrame):
                 .reset_index()
                 .sort_values("period")
             )
-            if _nota_periodo_unico(by_period, "period"):
+            if painel_vazio(by_period, "period"):
                 return
             c1, c2 = st.columns(2)
             _barra(c1, by_period, "period", "total", "Gasto por mês (R$)")
@@ -879,7 +946,7 @@ def temporal_charts(df: pd.DataFrame):
         )
         # Sem a guarda, um mês só desenhava um ponto solitário com o eixo x em
         # milissegundos (23:59:59.999 Jul 31 → 00:00:00.0005 Aug 1).
-        if _nota_periodo_unico(by_p, "period"):
+        if painel_vazio(by_p, "period"):
             return
         st.plotly_chart(
             _line(by_p, "period", "ticket_medio", "Evolução do ticket médio (R$)"),
@@ -1051,6 +1118,10 @@ def _escala_atual() -> float:
     return st.session_state.get(OTIMISMO_KEY, 100) / 100
 
 
+# Cacheado porque tem dois consumidores no MESMO rerun — a linha do topo e a
+# seção — com os mesmos argumentos: sem isto, os 437 itens são classificados
+# duas vezes por render.
+@st.cache_data(show_spinner=False)
 def _economia_evitavel(df: pd.DataFrame, items_df: pd.DataFrame,
                        escala: float = ESCALA_CENTRAL):
     """
@@ -1097,7 +1168,7 @@ def show_savings_line(df: pd.DataFrame, items_df: pd.DataFrame):
     # Economia: pesa mais que a legenda, menos que o sinal do mês.
     st.markdown(
         f'<p style="font-size:14px;line-height:22.4px;color:{INK_MUTE};margin:.35rem 0 0">'
-        f'Desse total, <span style="color:{ECONOMIA};font-weight:600">'
+        f'Desse total, <span style="color:{ECONOMIA_TEXTO};font-weight:600">'
         f'cerca de {_brl(total_saved, 0)} era evitável</span> — {pct:.0f}% do que '
         f'foi pago, cozinhando em casa. Estimativa; a conta está logo abaixo.</p>',
         unsafe_allow_html=True,
@@ -1232,7 +1303,11 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
             # pedidos" fica igual ao resto do dashboard. Com UMA categoria —
             # que é o filtro de abertura — as duas barras só repetiam os dois
             # KPIs do topo, contra a própria regra da casa.
-            if _nota_periodo_unico(by_cat, "category"):
+            if painel_vazio(
+                by_cat, "category",
+                saida="para ver onde o dinheiro foi, use *Top restaurantes* "
+                      "ou *Itens mais pedidos*",
+            ):
                 return
             c1, c2 = st.columns(2)
             c1.plotly_chart(
@@ -1317,6 +1392,17 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
 
         labels = ["Itens (líq.)", "Taxa entrega", "Taxa serviço"]
         values = [items_net, total_delivery, total_service]
+
+        # O invariante na tela, e não só no comentário: a composição TEM que
+        # somar o total. Hoje soma por construção; se alguém trocar a base de
+        # novo, quem olha descobre aqui em vez de somando de cabeça.
+        if abs(sum(values) - total_paid) > 0.01:
+            st.warning(
+                f"A composição soma {_brl(sum(values), md=True)} e o total pago é "
+                f"{_brl(total_paid, md=True)}. As fatias abaixo não fecham — trate o "
+                "gráfico como aproximação até isto ser corrigido.",
+                icon=":material/warning:",
+            )
 
         fig = go.Figure(
             go.Pie(
@@ -1459,14 +1545,26 @@ def orders_table(df: pd.DataFrame):
         # E só as colunas que o rótulo promete: o apply varria as 14, inclusive
         # as numéricas, então "10" casava com um valor de desconto.
         alvos = [c for c in ("Restaurante", "Categoria", "Status") if c in display]
-        mask = (
-            display[alvos]
-            .apply(lambda col: col.astype(str).str.contains(search, case=False, regex=False))
-            .any(axis=1)
-        )
-        display = display[mask]
-        if display.empty:
-            st.caption(f"Nenhum pedido com “{search}” no restaurante, categoria ou status.")
+        # Rede de segurança: a busca é a única entrada de texto livre da tela e
+        # já derrubou a metade de baixo uma vez. Se algo nela falhar, a tabela
+        # continua de pé e quem digitou lê um aviso, não um traceback.
+        try:
+            mask = (
+                display[alvos]
+                .apply(lambda col: col.astype(str).str.contains(search, case=False, regex=False))
+                .any(axis=1)
+            )
+            display = display[mask]
+        except Exception:
+            st.warning(
+                "Não consegui aplicar essa busca; mostrando todos os pedidos do filtro.",
+                icon=":material/warning:",
+            )
+        else:
+            if display.empty:
+                st.caption(
+                    f"Nenhum pedido com “{search}” no restaurante, categoria ou status."
+                )
 
     # Ordenação num terço da largura: solto, o selectbox esticava por ~1200px
     # de coluna de conteúdo para listar 14 nomes curtos.
@@ -1513,6 +1611,8 @@ def main():
     # acima da sidebar). Com o wordmark ali, repetir "iFood" no h1 seria dizer
     # a mesma coisa duas vezes — o título passa a nomear só a tela.
     if LOGO.exists():
+        # st.logo não aceita alt (1.58): o alt="Logo" vem do Streamlit e o
+        # localize.html troca por um nome de verdade, junto do resto do ARIA.
         st.logo(str(LOGO), icon_image=str(ICONE), size="large")
     st.title("Histórico de pedidos")
     _localize_widgets()  # traduz textos internos dos widgets (ex.: 'Select all')

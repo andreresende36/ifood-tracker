@@ -2,8 +2,9 @@
 <meta charset="utf-8">
 <title>localize</title>
 <!--
-  Traduz textos internos dos widgets do Streamlit que não têm API
-  (ex.: "Select all" do multiselect).
+  Costura de idioma e de acessibilidade sobre o que o Streamlit emite e não
+  expõe por API: texto interno de widget, atributos ARIA, o idioma do
+  documento e o estado do seletor segmentado.
 
   Mora num arquivo estático porque st.components.v1.html está depreciado e o
   substituto (st.iframe) recebe uma URL, não HTML inline. Servido pelo próprio
@@ -15,20 +16,139 @@
 -->
 <script>
   const doc = window.parent.document;
+
+  // ── 1. Idioma do documento ────────────────────────────────────────────────
+  // O Streamlit serve <html lang="en"> e não tem opção para mudar. A interface
+  // é inteiramente pt-BR: sem isto, um leitor de tela lê português com voz
+  // inglesa. WCAG 3.1.1.
+  doc.documentElement.lang = "pt-BR";
+
+  // ── 2. Texto visível dentro do widget ─────────────────────────────────────
   const MAP = {
     "Select all": "Selecionar todos",
     "Clear all": "Limpar todos",
     "No options to select.": "Nenhuma opção.",
     "No results": "Nenhum resultado",
+    "Press Enter to apply": "Pressione Enter para aplicar",
   };
-  function translate() {
+
+  // ── 3. Camada ARIA ────────────────────────────────────────────────────────
+  // O leitor de tela não lê o texto visível destes controles: lê o atributo.
+  // Traduzido o texto e não o atributo, metade da interface continuava em
+  // inglês para quem mais depende dela. WCAG 3.1.2.
+  const ARIA_FIXO = {
+    "Delete": "Remover",
+    "Clear all": "Limpar todos",
+    "Select a date range.": "Escolha um intervalo de datas.",
+    "Show/hide columns": "Mostrar/ocultar colunas",
+    "Download as CSV": "Baixar como CSV",
+    "Search": "Buscar",
+    "Fullscreen": "Tela cheia",
+    "Exit fullscreen": "Sair da tela cheia",
+    "Open in new tab": "Abrir em nova aba",
+    "Link to heading": "Link para esta seção",
+  };
+  // Padrões que carregam o valor do usuário dentro do rótulo.
+  const ARIA_PADROES = [
+    [/^(.*), close by backspace$/, (m) => `${m[1]}, remova com backspace`],
+    [/^Selected (.*)\.\s*(.*)$/, (m) => `${m[1]} selecionado. ${m[2]}`.trim()],
+    [/^Help for (.*)$/, (m) => `Ajuda sobre ${m[1]}`],
+  ];
+
+  function traduzAria(valor) {
+    if (ARIA_FIXO[valor]) return ARIA_FIXO[valor];
+    for (const [re, fn] of ARIA_PADROES) {
+      const m = valor.match(re);
+      if (m) return fn(m);
+    }
+    return null;
+  }
+
+  // ── 4. Estado do seletor segmentado ───────────────────────────────────────
+  // O segmento ativo se distingue APENAS pela cor: o Streamlit marca a
+  // diferença num data-testid e não emite aria-pressed. Quem não enxerga cor
+  // não sabe qual painel está aberto. WCAG 1.4.1 e 4.1.2.
+  function marcaSegmentos() {
+    doc.querySelectorAll('[data-testid^="stBaseButton-segmented_control"]').forEach((b) => {
+      const ativo = b.dataset.testid.endsWith("Active") ? "true" : "false";
+      // só escreve quando muda: o observer também escuta atributo, e reescrever
+      // o mesmo valor faz o ciclo se realimentar.
+      if (b.getAttribute("aria-pressed") !== ativo) b.setAttribute("aria-pressed", ativo);
+      // aria-label vazio herdado do Streamlit apaga o nome acessível em parte
+      // dos leitores; o rótulo do botão é o próprio texto.
+      if (b.getAttribute("aria-label") === "") b.removeAttribute("aria-label");
+    });
+  }
+
+  // ── 5. Marco principal e atalho de teclado ────────────────────────────────
+  // A sidebar tem ~340 nós e vem antes do conteúdo: sem atalho, chegar ao
+  // primeiro número pelo teclado custa a fileira inteira de filtros.
+  function marcoESalto() {
+    const alvo = doc.querySelector('[data-testid="stMain"]');
+    if (!alvo) return;
+    if (!alvo.hasAttribute("role")) {
+      alvo.setAttribute("role", "main");
+      alvo.setAttribute("aria-label", "Conteúdo do painel");
+      alvo.id = alvo.id || "conteudo";
+    }
+    if (doc.getElementById("pular-para-conteudo")) return;
+    const a = doc.createElement("a");
+    a.id = "pular-para-conteudo";
+    a.href = "#conteudo";
+    a.textContent = "Pular para o conteúdo";
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      alvo.setAttribute("tabindex", "-1");
+      alvo.focus();
+    });
+    doc.body.prepend(a);
+  }
+
+  // ── 6. Reflow dos gráficos ao redimensionar ───────────────────────────────
+  // O Plotly guarda a largura de quando desenhou. Redimensionar a janela sem
+  // recarregar deixava o gráfico com a largura antiga dentro de uma coluna
+  // nova. Só o reload corrigia.
+  let reflowTimer = null;
+  function reflow() {
+    const Plotly = window.parent.Plotly;
+    if (!Plotly || !Plotly.Plots) return;
+    doc.querySelectorAll(".js-plotly-plot").forEach((el) => {
+      try { Plotly.Plots.resize(el); } catch (_) {}
+    });
+  }
+  window.parent.addEventListener("resize", () => {
+    clearTimeout(reflowTimer);
+    reflowTimer = setTimeout(reflow, 150);
+  });
+
+  function aplicar() {
     const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
     let n;
     while ((n = walker.nextNode())) {
       const t = n.nodeValue.trim();
       if (MAP[t]) n.nodeValue = n.nodeValue.replace(t, MAP[t]);
     }
+    // alt genérico do logo, que o st.logo não deixa configurar
+    doc.querySelectorAll('img[alt="Logo"]').forEach((i) => {
+      i.setAttribute("alt", "iFood — histórico de pedidos");
+    });
+    doc.querySelectorAll("[aria-label],[title]").forEach((el) => {
+      for (const attr of ["aria-label", "title"]) {
+        const v = el.getAttribute(attr);
+        if (!v) continue;
+        const pt = traduzAria(v);
+        if (pt && pt !== v) el.setAttribute(attr, pt);
+      }
+    });
+    marcaSegmentos();
+    marcoESalto();
   }
-  translate();
-  new MutationObserver(translate).observe(doc.body, { childList: true, subtree: true });
+
+  aplicar();
+  new MutationObserver(aplicar).observe(doc.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["data-testid", "aria-label", "title"],
+  });
 </script>

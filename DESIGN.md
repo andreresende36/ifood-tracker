@@ -4,8 +4,10 @@ description: Painel local e escuro que transforma o histórico de delivery de um
 colors:
   dinheiro: "#ea1d2c"
   dinheiro-acao: "#c9101d"
+  dinheiro-texto: "#f0787f"
   pedidos: "#3987e5"
   economia: "#199e70"
+  economia-texto: "#3fbf90"
   surface-base: "#0e1117"
   surface-raised: "#161b24"
   surface-sidebar: "#0b0e14"
@@ -143,9 +145,13 @@ contra a superfície real, não escolhida a olho.
   da seleção de texto.
 - **Dinheiro Ação** (`{colors.dinheiro-acao}`): o mesmo vermelho um passo mais
   escuro, e só onde há **texto branco por cima** — botão primário, chips de
-  filtro, segmento ativo. O vermelho do logo dá 4,46:1 com branco e reprova o
-  AA de texto por 0,04; este dá 5,87:1, e ainda 3,22:1 contra a superfície,
-  então o botão continua lendo como forma cheia.
+  filtro. O vermelho do logo dá 4,46:1 com branco e reprova o AA de texto por
+  0,04; este dá 5,87:1, e ainda 3,22:1 contra a superfície, então o botão
+  continua lendo como forma cheia.
+- **Dinheiro Texto** (`{colors.dinheiro-texto}`): o vermelho **claro**, para
+  vermelho que é *texto* sobre superfície escura — o veredito do sinal do mês,
+  o segmento ativo do seletor, o valor do slider. Como texto, `#ea1d2c` dá
+  4,24:1 e `#c9101d` dá 3,22:1; ambos reprovam. Este dá 6,93:1.
 
 ### Secondary
 - **Pedidos** (`{colors.pedidos}`): contagem. Quantos pedidos, quantos itens,
@@ -154,6 +160,8 @@ contra a superfície real, não escolhida a olho.
 ### Tertiary
 - **Economia** (`{colors.economia}`): o contrafactual — economia estimada por
   prato e o custo de cozinhar em casa. É a cor da pergunta que o produto faz.
+- **Economia Texto** (`{colors.economia-texto}`): o par claro, mesma regra —
+  verde que é texto sobre superfície escura (8,16:1).
 
 ### Neutral
 - **Superfície Base** (`{colors.surface-base}`): o plano do conteúdo e a
@@ -184,10 +192,18 @@ vermelho da marca fixo, todo quarto matiz reprovou na separação para
 daltonismo (amarelo↔vermelho ΔE 4.4; violeta↔azul 1.9). Mais de três
 categorias vira barra, não fatia de pizza.
 
-**A Regra do Limiar Certo.** O vermelho da marca vive nos dois lados de uma
-fronteira: como **marca de dado** o limiar é 3:1 (objeto gráfico) e `#ea1d2c`
-passa; como **fundo de texto** o limiar é 4,5:1 e ele reprova. A paleta carrega
-os dois tons e a escolha é pelo papel, não pela aparência.
+**A Regra do Limiar Certo.** Cada matiz tem **três** papéis e três limiares, e
+usar o tom errado no papel errado reprova:
+
+| papel | limiar | vermelho | verde |
+|---|---|---|---|
+| marca de dado | 3:1 | `#ea1d2c` | `#199e70` |
+| fundo de ação (texto branco) | 4,5:1 | `#c9101d` | — |
+| texto sobre superfície escura | 4,5:1 | `#f0787f` | `#3fbf90` |
+
+A escolha é pelo papel, nunca pela aparência. O erro que essa tabela existe
+para evitar já foi cometido duas vezes aqui: primeiro texto em `#ea1d2c`
+(4,24:1), depois texto em `#c9101d` (3,22:1), cada um parecendo o certo.
 
 **A Regra do Zero que Recua.** Em escala sequencial sobre fundo escuro, o passo
 do zero vai para perto da superfície, nunca para o claro. O contrário
@@ -208,6 +224,9 @@ de leitura, uma fonte que chama atenção para si rouba do número.
   ("E se você tivesse cozinhado em casa?"). Sai como `h2`.
 - **Headline** (600, 20px/24px, −0.1px): título de seção da sidebar ("Filtros").
 - **Title** (600, 18px/21.6px, −0.09px): título de bloco dentro da seção, `h3`.
+  Degrau **reservado**: nenhuma seção usa hoje, e a regra existe para que o
+  primeiro `st.subheader` dentro de uma seção caia na escala em vez do default
+  do framework.
 - **Metric** (700, 26.4px, −0.02em): o valor do KPI. O tracking negativo
   aperta os dígitos para o número ler como uma unidade, não como uma fileira.
 - **Body** (400, 14px/22.4px): texto corrido, legendas, ajuda.
@@ -345,8 +364,16 @@ vermelho. A interface se anuncia sem gritar.
 
 ### Navigation
 Seletor segmentado (`st.segmented_control`) escolhe qual painel de análise
-montar. O segmento ativo vem em Dinheiro; os demais, em superfície elevada.
-Só o painel escolhido é construído.
+montar. O ativo **não é superfície preenchida**: é texto `{colors.dinheiro-texto}`
+em peso 600 sobre uma tinta de 10% do vermelho, com fio da mesma cor. Os demais
+ficam na superfície base com fio de borda. O peso é deliberado — sem ele o
+estado dependeria só da cor.
+
+O estado também sai no atributo (`aria-pressed`), que o Streamlit não emite:
+sem isso, quem não enxerga cor não sabe qual painel está aberto.
+
+Só o painel escolhido é construído, e o painel que **abre** é o primeiro com
+conteúdo no filtro corrente — não o primeiro da lista.
 
 ### Metric Tile
 O componente que carrega o propósito do produto. Sem caixa, sem borda, sem
@@ -408,6 +435,21 @@ A barra de ferramentas do Plotly não aparece (`displayModeBar: False`). Zoom e
 lasso não servem a um painel de agregados, e em 375px a barra pousa por cima do
 título do próprio gráfico.
 
+### Named Rules — o que o framework emite
+
+**A Regra da Costura.** O Streamlit emite coisas que não têm API e não
+pertencem a design system nenhum: `lang="en"`, ARIA em inglês, estado de
+seleção só na cor, ausência de marco `main`. O projeto não convive com isso —
+`static/localize.html` roda no documento pai e corrige idioma, atributos,
+`aria-pressed`, marco e atalho de teclado.
+
+Duas pegadinhas de cache mordem quem editar esse arquivo: o servidor estático
+do Streamlit **fixa o tamanho no start** (editar com o servidor no ar serve o
+conteúdo novo truncado no tamanho velho, e o script quebra no meio sem erro
+visível), e o navegador guarda `/app/static/` com cache longo. Por isso a URL
+do iframe leva `?v=<hash do arquivo>` — e por isso reiniciar o Streamlit faz
+parte de editar o arquivo.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -445,6 +487,10 @@ título do próprio gráfico.
 - **Don't** somar em dinheiro pedido que não foi entregue.
 - **Don't** pôr texto branco sobre `{colors.dinheiro}`: para fundo de texto o
   tom é `{colors.dinheiro-acao}`.
+- **Don't** usar `{colors.dinheiro}` ou `{colors.dinheiro-acao}` como cor de
+  texto sobre a superfície escura: os dois reprovam. O tom é
+  `{colors.dinheiro-texto}`.
+- **Don't** comunicar estado só por cor. Junto vai peso, ícone ou atributo.
 - **Don't** interpolar valor em `str.contains` sem `regex=False` — nome de
   restaurante e de prato traz parêntese, `+` e `*` o tempo todo.
 - **Don't** repetir num painel um valor que o bloco de KPIs já mostra.
