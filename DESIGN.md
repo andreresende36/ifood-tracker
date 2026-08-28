@@ -3,6 +3,7 @@ name: iFood Order Tracker
 description: Painel local e escuro que transforma o histórico de delivery de um casal em um número que dá para agir.
 colors:
   dinheiro: "#ea1d2c"
+  dinheiro-acao: "#c9101d"
   pedidos: "#3987e5"
   economia: "#199e70"
   surface-base: "#0e1117"
@@ -78,7 +79,7 @@ spacing:
   page-top: "2.25rem"
 components:
   button-primary:
-    backgroundColor: "{colors.dinheiro}"
+    backgroundColor: "{colors.dinheiro-acao}"
     textColor: "#ffffff"
     rounded: "{rounded.md}"
     padding: "4px 12px"
@@ -138,8 +139,13 @@ contra a superfície real, não escolhida a olho.
 ### Primary
 - **Dinheiro** (`{colors.dinheiro}`): o vermelho do próprio logo do iFood.
   Marca tudo que é valor pago — gasto por ano, mês, dia, faixa, categoria,
-  ticket médio, valor por restaurante — e é também a única cor de ação
-  preenchida da interface, o anel de foco e o rastro da seleção de texto.
+  ticket médio, valor por restaurante — e é também o anel de foco e o rastro
+  da seleção de texto.
+- **Dinheiro Ação** (`{colors.dinheiro-acao}`): o mesmo vermelho um passo mais
+  escuro, e só onde há **texto branco por cima** — botão primário, chips de
+  filtro, segmento ativo. O vermelho do logo dá 4,46:1 com branco e reprova o
+  AA de texto por 0,04; este dá 5,87:1, e ainda 3,22:1 contra a superfície,
+  então o botão continua lendo como forma cheia.
 
 ### Secondary
 - **Pedidos** (`{colors.pedidos}`): contagem. Quantos pedidos, quantos itens,
@@ -177,6 +183,11 @@ gráfico que inverta isso está errado, mesmo que fique bonito.
 vermelho da marca fixo, todo quarto matiz reprovou na separação para
 daltonismo (amarelo↔vermelho ΔE 4.4; violeta↔azul 1.9). Mais de três
 categorias vira barra, não fatia de pizza.
+
+**A Regra do Limiar Certo.** O vermelho da marca vive nos dois lados de uma
+fronteira: como **marca de dado** o limiar é 3:1 (objeto gráfico) e `#ea1d2c`
+passa; como **fundo de texto** o limiar é 4,5:1 e ele reprova. A paleta carrega
+os dois tons e a escolha é pelo papel, não pela aparência.
 
 **A Regra do Zero que Recua.** Em escala sequencial sobre fundo escuro, o passo
 do zero vai para perto da superfície, nunca para o claro. O contrário
@@ -226,6 +237,25 @@ português com `R$ 1,724.05` denuncia que ninguém olhou.
 (tabela, ticks de eixo). No valor grande e solto do KPI, figuras
 proporcionais: dígitos de largura fixa fazem `121` parecer frouxo em corpo
 grande.
+
+### Named Rules — números
+
+**A Regra da Base.** Existe **uma** fonte de verdade para o que foi pago:
+`total`. Toda composição — fatias de rosca, economia por prato, custo em casa —
+é derivada dela, nunca remontada a partir do preço de tabela dos itens. O preço
+de tabela não reconstrói o total: promoção do restaurante e benefício de clube
+abatem por fora e não aparecem em `coupon_discount`. Em 120 de 259 pedidos a
+conta não fechava, e a tela chegou a afirmar num título um total que as próprias
+fatias contradiziam em R$ 1.002,74.
+
+**A Regra do que Não Chegou.** Pedido cancelado, recusado ou de status
+desconhecido não é gasto e não entra em soma de dinheiro. Quando o recorte os
+contém, a tela diz quantos são e quanto somam, em vez de escondê-los.
+
+**A Regra da Faixa.** Onde o número é estimativa, a tela mostra a faixa e não
+um controle. Um slider que deixa arrastar a própria economia até um valor
+confortável é convite a negociar com o dado — o oposto de um extrato honesto.
+A incerteza se declara mostrando os dois extremos.
 
 ## Layout
 
@@ -343,9 +373,24 @@ traz é a comparação, não o total.
 A irmã da Signal Line, logo abaixo dos KPIs: responde a segunda pergunta da
 sessão — "dava para ter cozinhado?" — sem obrigar a rolar até a seção.
 
+O valor central sai como "cerca de"; a faixa completa vive no tile da seção.
 Corpo de texto em tinta recuada, com o valor evitável em Economia e peso 600:
 pesa mais que a legenda de cupons e taxas logo acima, menos que o sinal do mês
 logo abaixo do título. Diz que é estimativa e aponta para a conta completa.
+
+### Empty Panel
+O estado que a tela mais produz — o recorte de abertura é um mês só, e metade
+dos painéis não tem série para desenhar nele. Não é `st.info("Sem dados")`: é
+uma frase que diz **o que há** ("Só Agosto no filtro atual"), **onde está o
+número** ("o total está nos indicadores acima") e **dois caminhos nomeados**
+("use *Dia da semana* ou *Heatmap*"). A saída sugerida muda com a dimensão que
+esvaziou o painel.
+
+Vale também para o seletor: o painel que abre é o primeiro **com conteúdo** no
+filtro corrente, não o primeiro da lista.
+
+E a nota sai **uma vez**, antes de abrir as colunas — emitida dentro de cada
+uma, a mesma frase aparecia duas vezes lado a lado.
 
 ### Chart Frame
 Todo gráfico compartilha o mesmo cromo: fundo transparente, grade
@@ -376,7 +421,10 @@ título do próprio gráfico.
   delimitador de LaTeX e o Streamlit engole o trecho entre eles.
 - **Do** montar só o painel selecionado; painel oculto tem largura zero e
   quebra o cálculo de área do gráfico.
-- **Do** declarar na tela quando o número é estimativa.
+- **Do** declarar na tela quando o número é estimativa, e mostrar a faixa em
+  vez de um controle que a ajuste.
+- **Do** derivar toda composição de dinheiro do `total`, e conferir que a soma
+  fecha antes de desenhar.
 - **Do** comparar períodos como-por-como: o mês parcial vai contra o mesmo
   recorte de dias dos meses anteriores, nunca contra meses cheios.
 - **Do** manter o veredito das perguntas da sessão no topo, em uma frase cada,
@@ -394,6 +442,11 @@ título do próprio gráfico.
 - **Don't** rotular toda barra de uma série longa nem toda fatia de uma rosca:
   acima de 8 marcas, ou abaixo de 8% de uma fatia, o rótulo é recortado.
 - **Don't** deixar mais de uma ação preenchida em vermelho por tela.
+- **Don't** somar em dinheiro pedido que não foi entregue.
+- **Don't** pôr texto branco sobre `{colors.dinheiro}`: para fundo de texto o
+  tom é `{colors.dinheiro-acao}`.
+- **Don't** interpolar valor em `str.contains` sem `regex=False` — nome de
+  restaurante e de prato traz parêntese, `+` e `*` o tempo todo.
 - **Don't** repetir num painel um valor que o bloco de KPIs já mostra.
 - **Don't** emitir a mesma legenda dentro de cada coluna de um par: a nota que
   vale para a linha inteira sai uma vez, antes de abrir as colunas.

@@ -6,8 +6,12 @@ enableStaticServing = true
 [theme]
 base = "dark"
 
-# Vermelho da marca, amostrado do próprio logo (assets/ifood-logo.png).
-primaryColor = "#ea1d2c"
+# Vermelho da marca UM PASSO MAIS ESCURO, e só nos widgets. O #ea1d2c do logo
+# dá 4,46:1 com texto branco — reprova o AA de texto por 0,04. Este dá 5,87:1
+# com branco e ainda 3,22:1 contra a superfície, então o botão continua lendo
+# como forma cheia. As marcas de dado seguem no #ea1d2c puro (dashboard.py),
+# onde o limiar é de objeto gráfico, 3:1, e o vermelho do logo passa.
+primaryColor = "#c9101d"
 
 # NÃO mudar sem revalidar a paleta dos gráficos: foi contra esta superfície
 # que as três matizes passaram nos testes de CVD e contraste.

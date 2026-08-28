@@ -76,6 +76,27 @@ st.markdown("""
        o valor do KPI (grande e solto) não — ali fica proporcional. */
     div[data-testid="stDataFrame"] { font-variant-numeric: tabular-nums; }
 
+    /* A proibição de sombra vale para o que o Streamlit desenha sozinho: a
+       barra flutuante de ferramentas da tabela vem com box-shadow de fábrica,
+       e era a única sombra viva na tela inteira. */
+    [data-testid="stElementToolbarButtonContainer"],
+    [data-testid="stElementToolbar"] { box-shadow: none; }
+
+    /* Alvos de toque. O ✕ de um chip de filtro nasce com 8,8×8,8 e os ícones
+       de "limpar tudo" com 21×21 — a área que a WCAG 2.5.8 (AA) exige é
+       24×24. Os 44×44 do AAA não cabem num chip de 28px sem redesenhar o
+       widget do Streamlit, e a cena de uso é desktop com mouse; 24 é o alvo. */
+    [data-baseweb="tag"] { min-height: 26px; }
+    [data-baseweb="tag"] span[role="presentation"] {
+        min-width: 24px; min-height: 24px;
+        display: inline-flex; align-items: center; justify-content: center;
+        margin: -6px -4px -6px 0;   /* cresce a área sem crescer o desenho */
+    }
+    [data-baseweb="select"] svg[role="button"],
+    [data-baseweb="select"] [role="button"] > svg {
+        box-sizing: content-box; padding: 4px; margin: -4px;
+    }
+
     /* iframe utilitário do localize.html — carrega e roda, mas não ocupa espaço */
     .st-key-localize_iframe { display: none; }
 </style>
@@ -384,7 +405,28 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
 
 # ── KPI cards ─────────────────────────────────────────────────────────────────
 
+def _entregues(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Separa o que foi entregue do que não foi.
+
+    Comida que nunca chegou não é gasto: com o filtro de status limpo, os 9
+    pedidos cancelados, recusados e de status desconhecido somavam R$ 333,60
+    dentro do "Total gasto". A regra já existia no sinal do mês e não alcançava
+    os KPIs.
+
+    Se o recorte NÃO tem nenhum entregue, quem filtrou pediu para ver os
+    cancelados — aí o corte não se aplica e o df volta inteiro.
+    """
+    if "status" not in df:
+        return df, df.iloc[0:0]
+    ok = df[df["status"] == "Entregue"]
+    if ok.empty:
+        return df, df.iloc[0:0]
+    return ok, df[df["status"] != "Entregue"]
+
+
 def show_kpis(df: pd.DataFrame):
+    df, fora = _entregues(df)
     total_spent    = df["total"].sum()
     n_orders       = len(df)
     avg_ticket     = df["total"].mean() if n_orders else 0
@@ -400,10 +442,16 @@ def show_kpis(df: pd.DataFrame):
     c1.metric("Total gasto",  _brl(total_spent))
     c2.metric("Pedidos",      f"{n_orders}")
     c3.metric("Ticket médio", _brl(avg_ticket))
-    st.caption(
+    nota = (
         f"Economizado em cupons **{_brl(total_savings, md=True)}**"
         f"　·　Taxas de entrega e serviço **{_brl(total_delivery + total_service, md=True)}**"
     )
+    if not fora.empty:
+        nota += (
+            f"　·　{len(fora)} pedido{'s' if len(fora) > 1 else ''} cancelado, recusado ou "
+            f"sem status somando {_brl(fora['total'].sum(), md=True)} ficaram fora do total"
+        )
+    st.caption(nota)
 
 
 # ── Sinal do mês ──────────────────────────────────────────────────────────────
@@ -532,6 +580,9 @@ def show_month_signal(orders_df: pd.DataFrame):
     )
 
     ate = (f"até o dia {s['corte']}" if s["parcial"] else "no mês fechado")
+    # O sinal roda sobre o histórico inteiro e os KPIs logo abaixo rodam sobre
+    # o filtro. Sem dizer isso, limpar o filtro de mês deixa a frase falando de
+    # agosto ao lado de um total do ano inteiro, e a tela parece se contradizer.
     nota = (
         f"Média dos {s['meses']} meses anteriores {ate}: "
         f"**{_brl(s['media'], md=True)}** · faixa de **{_brl(s['minimo'], md=True)}** a "
@@ -539,6 +590,7 @@ def show_month_signal(orders_df: pd.DataFrame):
     )
     if s["projecao"]:
         nota += f"　·　No ritmo atual o mês fecha em **{_brl(s['projecao'], md=True)}** — estimativa"
+    nota += "　·　Comparação sobre o histórico completo, sem os filtros da barra lateral"
     st.caption(nota)
 
 
@@ -638,7 +690,7 @@ def _line(df, x, y, title):
 
 # ── Temporal analysis ─────────────────────────────────────────────────────────
 
-def _abas(opcoes: list, key: str) -> str:
+def _abas(opcoes: list, key: str, default: str | None = None) -> str:
     """
     Seletor de painel que monta SÓ o escolhido.
 
@@ -647,12 +699,17 @@ def _abas(opcoes: list, key: str) -> str:
     negativa (o console enchia de '<rect> attribute width: A negative value
     is not valid'). Renderizando um painel por vez a causa some — e ainda
     sobra menos trabalho por rerun.
+
+    `default` existe porque o primeiro da lista nem sempre tem o que dizer: no
+    recorte de abertura do produto (mês corrente), "Por ano" e "Por mês" caem
+    num período único e a seção de análise abria vazia.
     """
+    padrao = default if default in opcoes else opcoes[0]
     escolha = st.segmented_control(
         "Visualização", opcoes,
-        default=opcoes[0], key=key, label_visibility="collapsed",
+        default=padrao, key=key, label_visibility="collapsed",
     )
-    return escolha or opcoes[0]  # segmented_control permite desmarcar → None
+    return escolha or padrao  # segmented_control permite desmarcar → None
 
 
 def temporal_charts(df: pd.DataFrame):
@@ -660,10 +717,14 @@ def temporal_charts(df: pd.DataFrame):
     # painel, e ela não é um recorte de tempo — é de tamanho de pedido.
     st.header(":material/insights: Quando e quanto")
 
+    # Um recorte de um mês só não tem série temporal: "Por ano" e "Por mês"
+    # viram uma barra só. Nesse caso abre no padrão DENTRO do mês.
+    meses = df["ordered_at"].dt.to_period("M").nunique() if "ordered_at" in df else 0
     aba = _abas(
         ["Por ano", "Por mês", "Dia da semana", "Heatmap", "Ticket médio",
          "Faixa de valor"],
         key="aba_temporal",
+        default="Por ano" if meses > 1 else "Dia da semana",
     )
 
     if aba == "Faixa de valor":
@@ -812,6 +873,10 @@ def temporal_charts(df: pd.DataFrame):
             .rename(columns={"total": "ticket_medio"})
             .sort_values("period")
         )
+        # Sem a guarda, um mês só desenhava um ponto solitário com o eixo x em
+        # milissegundos (23:59:59.999 Jul 31 → 00:00:00.0005 Aug 1).
+        if _nota_periodo_unico(by_p, "period"):
+            return
         st.plotly_chart(
             _line(by_p, "period", "ticket_medio", "Evolução do ticket médio (R$)"),
             width="stretch", config=PLOT_CONFIG,
@@ -892,19 +957,54 @@ _DEFAULT_DISH = ("Outros", 0.35)  # margem média conservadora
 
 
 def _classify_dish(name: str) -> tuple[str, float]:
-    """Mapeia o nome do item → (categoria, economia% estimada em casa)."""
+    """
+    Mapeia o nome do item → (categoria, economia% estimada em casa).
+
+    Vence a categoria com MAIS evidência no nome, não a primeira da lista.
+    Com first-match-wins, "Bebida" (a segunda maior taxa, e a primeira da
+    lista a casar) engolia todo combo que mencionasse um refrigerante:
+    "Parmegiana de Baby Beef Angus + Refrigerante 600ml" saía como bebida a
+    70%. Empate vai para a categoria mais conservadora — na dúvida, a
+    estimativa erra para menos.
+    """
     n = str(name).lower()
+    # Um combo não é o refrigerante que vem dentro dele. "Combo 6 Esfihas +
+    # 1 Refri Lata" só casa em "refri" — nenhuma categoria conhece "esfiha" —
+    # e sairia como bebida a 70%. Nome montado cai no padrão conservador.
+    montado = any(t in n for t in ("+", "combo", "oferta", "kit"))
+    melhor = None
     for label, pct, keys in DISH_CATEGORIES:
-        if any(k in n for k in keys):
-            return label, pct
-    return _DEFAULT_DISH
+        acertos = sum(1 for k in keys if k in n)
+        if not acertos:
+            continue
+        # mais palavras-chave batidas vence; empate, menor economia vence
+        chave = (acertos, -pct)
+        if melhor is None or chave > melhor[0]:
+            melhor = (chave, (label, pct))
+    if melhor is None:
+        return _DEFAULT_DISH
+    if montado and melhor[1][0] == "Bebida":
+        return _DEFAULT_DISH
+    return melhor[1]
 
 
-def _items_savings(items_df: pd.DataFrame, scale: float) -> pd.DataFrame:
+def _items_savings(items_df: pd.DataFrame, scale: float,
+                   orders_df: pd.DataFrame | None = None) -> pd.DataFrame:
     """
     Economia estimada por item, classificando cada prato por tipo.
     `scale` (0.5–1.5) ajusta o otimismo global dos percentuais.
-    Y = preço pago no item × economia%(tipo) × scale.
+    Y = valor pago no item × economia%(tipo) × scale.
+
+    O preço que vem do iFood no item é o de TABELA. O que o pedido custou de
+    fato é menor: cupom, promoção do restaurante e benefício de clube abatem
+    por fora, e nem todos aparecem em `coupon_discount` — em 120 dos 259
+    pedidos, `subtotal − cupom + taxas` não bate com `total`. Somar preço de
+    tabela e chamar de "pago" inflava a base da economia em 11,4%.
+
+    Por isso cada item é rateado até o que o pedido efetivamente custou em
+    comida: `total − entrega − serviço`. Com `orders_df`, a soma de `paid`
+    fecha com o KPI da tela; sem ele (chamada antiga), continua no preço de
+    tabela.
     """
     if items_df.empty:
         return items_df
@@ -912,24 +1012,54 @@ def _items_savings(items_df: pd.DataFrame, scale: float) -> pd.DataFrame:
     cls = out["item_name"].apply(_classify_dish)
     out["dish_cat"] = cls.apply(lambda c: c[0])
     out["save_pct"] = cls.apply(lambda c: min(c[1] * scale, 0.95))
-    paid = out["subtotal"].where(out["subtotal"] > 0, out["unit_price"] * out["quantity"])
-    out["paid"] = paid.fillna(0)
+    tabela = out["subtotal"].where(out["subtotal"] > 0, out["unit_price"] * out["quantity"])
+    out["paid"] = tabela.fillna(0)
+
+    if orders_df is not None and not orders_df.empty:
+        pago_em_comida = (
+            orders_df["total"] - orders_df["delivery_fee"] - orders_df["service_fee"]
+        )
+        alvo = out["order_id"].map(dict(zip(orders_df["id"], pago_em_comida)))
+        bruto = out.groupby("order_id")["paid"].transform("sum")
+        # fator 1 onde não dá para ratear: pedido sem itens somando, ou item de
+        # um pedido que não está no recorte.
+        fator = (alvo / bruto).where(bruto > 0).fillna(1).clip(lower=0)
+        out["paid"] = out["paid"] * fator
+
     out["home_cost"] = out["paid"] * (1 - out["save_pct"])
     out["saved"] = out["paid"] - out["home_cost"]
     return out
 
 
-def _economia_evitavel(df: pd.DataFrame, items_df: pd.DataFrame, escala: float):
+# A estimativa não tem um valor: tem uma faixa. Estes são os dois extremos do
+# que os percentuais por tipo de prato admitem, e o meio é o que a tela chama
+# de "cerca de". Eram as pontas do antigo slider de otimismo — que ofereceu ao
+# usuário arrastar a própria economia até um número confortável, o oposto de
+# um extrato honesto. A faixa diz a mesma incerteza sem pedir que alguém
+# negocie com ela.
+ESCALA_CONSERVADORA = 0.5
+ESCALA_CENTRAL = 1.0
+ESCALA_OTIMISTA = 1.5
+
+
+def _economia_evitavel(df: pd.DataFrame, items_df: pd.DataFrame,
+                       escala: float = ESCALA_CENTRAL):
     """
     A conta do contrafactual, isolada porque tem dois consumidores: a linha do
-    topo e a seção inteira. Devolve (economia total, economia nos pratos,
-    taxas, custo em casa, total pago).
+    topo e a seção inteira.
 
-    Taxa de entrega e serviço entram por inteiro — cozinhar em casa não tem
-    entregador. A economia dos pratos é estimativa por tipo, escalada pelo
-    controle de otimismo.
+    Devolve (itens classificados, economia total, economia nos pratos, taxas,
+    custo em casa, total pago).
+
+    Taxa de entrega e serviço entram por inteiro e SEM estimativa — cozinhar em
+    casa não tem entregador. A economia dos pratos é estimativa por tipo.
+
+    O que fecha a conta: `sav["paid"]` é rateado até `total − taxas`, então
+    itens + taxas == o mesmo total que o KPI do topo mostra.
     """
-    sav = _items_savings(items_df, escala)
+    df, _ = _entregues(df)          # comida que não chegou não tem contrafactual
+    items_df = items_df[items_df["order_id"].isin(df["id"])] if not items_df.empty else items_df
+    sav = _items_savings(items_df, escala, df)
     food_saved = sav["saved"].sum()
     fees = df["delivery_fee"].sum() + df["service_fee"].sum()
     total_saved = food_saved + fees
@@ -937,10 +1067,11 @@ def _economia_evitavel(df: pd.DataFrame, items_df: pd.DataFrame, escala: float):
     return sav, total_saved, food_saved, fees, total_pago - total_saved, total_pago
 
 
-# Chave do controle de otimismo. A linha do topo é desenhada ANTES da seção que
-# tem o slider, então lê o valor pela session_state e cai no padrão na primeira
-# renderização da sessão.
-OTIMISMO_KEY = "otimismo_estimativa"
+def _faixa_economia(df: pd.DataFrame, items_df: pd.DataFrame):
+    """Os dois extremos da estimativa: (conservador, otimista)."""
+    baixo = _economia_evitavel(df, items_df, ESCALA_CONSERVADORA)[1]
+    alto  = _economia_evitavel(df, items_df, ESCALA_OTIMISTA)[1]
+    return baixo, alto
 
 
 def show_savings_line(df: pd.DataFrame, items_df: pd.DataFrame):
@@ -954,8 +1085,7 @@ def show_savings_line(df: pd.DataFrame, items_df: pd.DataFrame):
     """
     if df.empty or items_df.empty:
         return
-    escala = st.session_state.get(OTIMISMO_KEY, 100) / 100
-    _, total_saved, _, _, _, total_pago = _economia_evitavel(df, items_df, escala)
+    _, total_saved, _, _, _, total_pago = _economia_evitavel(df, items_df)
     if total_pago <= 0:
         return
     pct = total_saved / total_pago * 100
@@ -988,25 +1118,26 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
         "**Taxas de entrega + serviço** são 100% evitáveis e entram por cima."
     )
 
-    scale = st.slider(
-        "Otimismo da estimativa (ajusta todos os percentuais)",
-        min_value=50, max_value=150, value=100, step=10, format="%d%%",
-        key=OTIMISMO_KEY,
-        help="100% = percentuais padrão por tipo de prato. 150% = mais otimista.",
-    )
     sav, total_saved, food_saved, fees, home_total, total_pago = _economia_evitavel(
-        df, items_df, scale / 100
+        df, items_df
     )
     home_food = sav["home_cost"].sum()
+    baixo, alto = _faixa_economia(df, items_df)
 
-    c1, c2, c3, c4 = st.columns(4)
-    # Sem chip de delta: economizar é o desfecho bom, e o chip saía em vermelho
-    # com seta para cima — alarme onde não há alarme. A porcentagem já está na
-    # linha do topo da tela, no lugar certo.
-    c1.metric("Economia total",      _brl(total_saved))
-    c2.metric("Custo cozinhando",    _brl(home_total))
-    c3.metric("Economia nos pratos", _brl(food_saved))
-    c4.metric("Taxas evitadas",      _brl(fees))
+    # Dois tiles, não quatro: os outros dois decompõem o primeiro e desciam
+    # para uma fileira de números que ninguém reconcilia de cabeça. A faixa
+    # ocupa o lugar do valor único porque é o que uma estimativa honestamente é.
+    c1, c2 = st.columns(2)
+    # Um "R$" só na faixa: dois cifrões na mesma string viram delimitador de
+    # LaTeX e o Streamlit come o trecho entre eles — a faixa saía "R 475 – R 1.130".
+    c1.metric("Economia estimada", f"{_brl(baixo, 0)} – {_brl(alto, 0).removeprefix('R$ ')}")
+    c2.metric("Custo cozinhando",  _brl(home_total))
+    st.caption(
+        f"No meio da faixa: **{_brl(total_saved, md=True)}** "
+        f"　·　{_brl(food_saved, md=True)} de economia estimada na comida "
+        f"　·　{_brl(fees, md=True)} de taxas, evitáveis por inteiro — essa "
+        "parte não é estimativa."
+    )
 
     # Economia agregada por tipo de prato
     by_cat = (
@@ -1041,7 +1172,7 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
 
     # Top pratos: o que mais te custou X e quanto seria o Y
     with st.expander("Ver economia prato a prato (top 30)",
-                     icon=":material/search:"):
+                     icon=":material/receipt_long:"):
         top = (
             sav.groupby(["item_name", "dish_cat"])
             .agg(qtd=("quantity", "sum"), pago=("paid", "sum"),
@@ -1060,10 +1191,11 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
         st.dataframe(disp, width="stretch", hide_index=True)
 
     st.caption(
-        f"Com os percentuais atuais, fazer esses pratos em casa teria custado "
-        f"~{_brl(home_food, md=True)} em ingredientes vs. {_brl(sav['paid'].sum(), md=True)} pagos "
-        f"no delivery — economia de **{_brl(food_saved, md=True)}** só nos pratos, mais "
-        f"{_brl(fees, md=True)} de taxas evitadas."
+        f"Fazer esses pratos em casa teria custado ~{_brl(home_food, md=True)} em "
+        f"ingredientes, contra {_brl(sav['paid'].sum(), md=True)} que os mesmos pratos "
+        f"custaram no delivery — economia de **{_brl(food_saved, md=True)}** só na comida, "
+        f"mais {_brl(fees, md=True)} de taxas. O valor dos pratos é o que foi de fato "
+        "pago: cupom e promoção já descontados."
     )
 
 
@@ -1074,6 +1206,9 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
     aba = _abas(
         ["Por categoria", "Top restaurantes", "Itens mais pedidos", "Distribuição de custos"],
         key="aba_restaurantes",
+        # Uma categoria só (o filtro de abertura) não faz gráfico de categoria.
+        default="Por categoria" if ("category" in df and df["category"].nunique() > 1)
+                else "Top restaurantes",
     )
 
     if aba == "Por categoria":
@@ -1087,10 +1222,13 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
                 .reset_index()
                 .sort_values("total", ascending=False)
             )
+            # Barra, não rosca: com mais de uma categoria o par "gasto |
+            # pedidos" fica igual ao resto do dashboard. Com UMA categoria —
+            # que é o filtro de abertura — as duas barras só repetiam os dois
+            # KPIs do topo, contra a própria regra da casa.
+            if _nota_periodo_unico(by_cat, "category"):
+                return
             c1, c2 = st.columns(2)
-            # Barra, não rosca: com o filtro padrão (Categoria = Restaurante)
-            # a rosca virava uma fatia só marcando 100% — não dizia nada. Em
-            # barra o par "gasto | pedidos" fica igual ao resto do dashboard.
             c1.plotly_chart(
                 _bar(by_cat, "category", "total", "Gasto por categoria (R$)",
                      text=by_cat["total"].apply(lambda v: _brl(v, 0))),
@@ -1152,6 +1290,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
         st.plotly_chart(fig, width="stretch", config=PLOT_CONFIG)
 
     elif aba == "Distribuição de custos":
+        df, _ = _entregues(df)      # mesma base do bloco de KPIs
         if df.empty:
             return
         total_subtotal = df["subtotal"].sum()
@@ -1160,9 +1299,15 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
         total_discount = df["coupon_discount"].sum()
         total_paid     = df["total"].sum()
 
-        # A pizza mostra apenas o que foi EFETIVAMENTE PAGO (soma = total).
-        # Itens líquidos = subtotal − cupom (o cupom reduz o custo, não é custo).
-        items_net = total_subtotal - total_discount
+        # A fatia dos itens sai do TOTAL menos as taxas, e não de
+        # "subtotal − cupom". O preço de tabela dos itens não reconstrói o
+        # total: promoção do restaurante e benefício de clube abatem por fora
+        # e não aparecem em coupon_discount — em 120 de 259 pedidos a conta
+        # não fechava, e a rosca afirmava no título um total que as fatias
+        # contradiziam (R$ 1.002,74 de diferença em 2026). Assim a soma é o
+        # total por construção.
+        items_net = total_paid - total_delivery - total_service
+        abatido = total_subtotal - items_net
 
         labels = ["Itens (líq.)", "Taxa entrega", "Taxa serviço"]
         values = [items_net, total_delivery, total_service]
@@ -1183,8 +1328,11 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
                 text=[f"{v / sum(values):.0%}" if v / sum(values) >= 0.08 else ""
                       for v in values],
                 textinfo="text",
-                textposition="inside",
-                insidetextfont=dict(color="#0e1117", size=13),
+                # Fora da fatia: dentro, o rótulo ficava em #0e1117 sobre o
+                # vermelho da marca — 4,24:1, abaixo do AA de texto. Fora, ele
+                # cai na tinta recuada sobre a superfície, com 5,84:1.
+                textposition="outside",
+                outsidetextfont=dict(color=INK_MUTE, size=13),
                 hovertemplate="%{label}<br>R$ %{value:,.2f} (%{percent})<extra></extra>",
                 sort=False,
             )
@@ -1196,12 +1344,20 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
             legend=dict(orientation="h", y=-0.05, font=dict(color=INK_MUTE)),
         )
         st.plotly_chart(_cromo(fig), width="stretch", config=PLOT_CONFIG)
-        st.caption(
-            f"Itens (bruto): {_brl(total_subtotal, md=True)}  ·  "
-            f"Economia em cupons: −{_brl(total_discount, md=True)}  →  "
-            f"Itens líquidos: {_brl(items_net, md=True)}. "
-            "O cupom **não** é custo — abate o valor dos itens."
+        outros = abatido - total_discount
+        nota = (
+            f"Preço de tabela dos itens: {_brl(total_subtotal, md=True)}  ·  "
+            f"abatido: −{_brl(abatido, md=True)}  →  "
+            f"pago em comida: {_brl(items_net, md=True)}. "
+            "Desconto **não** é custo — por isso não tem fatia."
         )
+        if outros > 0.01:
+            nota += (
+                f" Do abatido, {_brl(total_discount, md=True)} veio de cupom; "
+                f"os outros {_brl(outros, md=True)} são promoção do restaurante "
+                "e benefício de clube, que o iFood não discrimina no histórico."
+            )
+        st.caption(nota)
 
 
 # ── Scraper runner ────────────────────────────────────────────────────────────
@@ -1289,18 +1445,43 @@ def orders_table(df: pd.DataFrame):
     ]
     display.columns = names
 
-    search = st.text_input("Buscar restaurante ou status", "")
+    search = st.text_input("Buscar restaurante, categoria ou status", "")
     if search:
-        mask = display.apply(
-            lambda col: col.astype(str).str.contains(search, case=False), axis=1
-        ).any(axis=1)
+        # regex=False: o nome do item traz "(", "+" e "*" o tempo todo, e um
+        # parêntese solto derrubava a metade de baixo da tela com um traceback
+        # do pyarrow no lugar da tabela e dos botões de export.
+        # E só as colunas que o rótulo promete: o apply varria as 14, inclusive
+        # as numéricas, então "10" casava com um valor de desconto.
+        alvos = [c for c in ("Restaurante", "Categoria", "Status") if c in display]
+        mask = (
+            display[alvos]
+            .apply(lambda col: col.astype(str).str.contains(search, case=False, regex=False))
+            .any(axis=1)
+        )
         display = display[mask]
+        if display.empty:
+            st.caption(f"Nenhum pedido com “{search}” no restaurante, categoria ou status.")
 
-    sort_col = st.selectbox("Ordenar por", display.columns.tolist(), index=0)
-    asc = st.checkbox("Crescente", value=False)
+    # Ordenação num terço da largura: solto, o selectbox esticava por ~1200px
+    # de coluna de conteúdo para listar 14 nomes curtos.
+    c_ord, c_dir, _ = st.columns([2, 1, 3])
+    sort_col = c_ord.selectbox("Ordenar por", display.columns.tolist(), index=0)
+    asc = c_dir.checkbox("Crescente", value=False)
     display = display.sort_values(sort_col, ascending=asc)
 
-    st.dataframe(display, width="stretch", height=400)
+    # A tela mostra dinheiro e data formatados; o export leva os tipos crus,
+    # senão a planilha recebe texto e ninguém soma nada nela.
+    vis = display.copy()
+    for col in ("Total (R$)", "Subtotal", "Entrega", "Serviço", "Desconto"):
+        if col in vis:
+            vis[col] = vis[col].apply(_brl)
+    if "Data/hora" in vis:
+        vis["Data/hora"] = pd.to_datetime(vis["Data/hora"], errors="coerce").dt.strftime(
+            "%d-%m-%Y %H:%M"
+        )
+    # hide_index: o índice do pandas vinha com furos (0,1,2,4,6,9…) porque o
+    # recorte preserva a numeração do banco. Na tela isso lê como linha faltando.
+    st.dataframe(vis, width="stretch", height=400, hide_index=True)
 
     # Export
     col1, col2 = st.columns([1, 5])
