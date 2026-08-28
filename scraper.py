@@ -74,6 +74,11 @@ DAY_LABELS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domi
 # ── Scraper ───────────────────────────────────────────────────────────────────
 
 class IFoodScraper:
+    # Vira True quando a janela/browser some. Os laços consultam isso para
+    # parar de tentar — sem ele, com o Chrome fechado o enriquecimento gasta
+    # 20 pedidos × 2 URLs × 20s de timeout antes de desistir.
+    _browser_closed = False
+
     def __init__(self, profile_path: str = None, headless: bool = False,
                  profile_name: str = "default", auto: bool = False):
         self.profile_name = profile_name or "default"
@@ -257,13 +262,15 @@ class IFoodScraper:
         é transitória e basta repetir; a segunda não tem o que tentar — devolve
         o default para o scraper seguir e gravar o que já coletou.
         """
+        if self._browser_closed:
+            return default
         for tentativa in (1, 2):
             try:
                 return await page.evaluate(expr)
             except Exception as e:
                 motivo = str(e).splitlines()[0]
                 if "closed" in motivo.lower():
-                    log.warning("⚠ Janela do Chrome fechada — seguindo com o que já foi coletado.")
+                    self._marca_fechado()
                     return default
                 if tentativa == 1:
                     log.warning(f"⚠ Contexto perdido (navegação?); tentando de novo: {motivo}")
@@ -271,6 +278,30 @@ class IFoodScraper:
                     continue
                 log.warning(f"⚠ Persistiu o erro, seguindo sem este passo: {motivo}")
         return default
+
+    def _marca_fechado(self):
+        """Registra (uma vez só) que a janela sumiu."""
+        if not self._browser_closed:
+            log.warning("⚠ Janela do Chrome fechada — seguindo com o que já foi coletado.")
+        self._browser_closed = True
+
+    async def _safe_goto(self, page: Page, url: str, timeout: int = 20_000) -> bool:
+        """
+        page.goto() com a mesma política do _safe_eval: devolve se deu certo,
+        marca o browser como fechado quando for o caso e nunca propaga exceção.
+        """
+        if self._browser_closed:
+            return False
+        try:
+            await page.goto(url, wait_until="networkidle", timeout=timeout)
+            return True
+        except Exception as e:
+            motivo = str(e).splitlines()[0]
+            if "closed" in motivo.lower():
+                self._marca_fechado()
+            else:
+                log.warning(f"  Não consegui abrir {url}: {motivo}")
+            return False
 
     async def _scroll_and_wait(self, page: Page) -> bool:
         # default 0 nos dois lados: se a página sumiu, new > old é falso e o
@@ -346,17 +377,21 @@ class IFoodScraper:
 
         log.info(f"🔎 {len(incomplete)} pedidos incompletos — buscando detalhe individual…")
         for i, oid in enumerate(incomplete, 1):
+            if self._browser_closed:
+                log.warning(
+                    f"⚠ Enriquecimento interrompido em {i - 1}/{len(incomplete)} — "
+                    "janela fechada. O que já foi coletado será gravado."
+                )
+                break
             for url in (
                 f"https://www.ifood.com.br/pedido/{oid}",
                 f"https://www.ifood.com.br/pedidos/{oid}",
             ):
-                try:
-                    await page.goto(url, wait_until="networkidle", timeout=20_000)
-                    await asyncio.sleep(REQUEST_DELAY)
-                    if not self._is_incomplete(self._api_orders.get(oid, {})):
-                        break  # já completou
-                except Exception:
+                if not await self._safe_goto(page, url):
                     continue
+                await asyncio.sleep(REQUEST_DELAY)
+                if not self._is_incomplete(self._api_orders.get(oid, {})):
+                    break  # já completou
             status = "ok" if not self._is_incomplete(self._api_orders.get(oid, {})) else "ainda incompleto"
             log.info(f"  [{i}/{len(incomplete)}] {oid} → {status}")
             await asyncio.sleep(REQUEST_DELAY)
@@ -382,14 +417,12 @@ class IFoodScraper:
 
     async def _dom_scrape_detail(self, page: Page, order_id: str) -> dict | None:
         url = f"https://www.ifood.com.br/pedidos/{order_id}"
-        try:
-            await page.goto(url, wait_until="networkidle", timeout=20000)
-            await asyncio.sleep(1.2)
-        except Exception as e:
-            log.warning(f"  Could not load {url}: {e}")
+        if not await self._safe_goto(page, url):
             return None
+        await asyncio.sleep(1.2)
 
-        result = await page.evaluate("""
+        # _safe_eval devolve None se a página morrer entre o goto e o evaluate
+        result = await self._safe_eval(page, """
         () => {
             const tx = sel => {
                 const els = [...document.querySelectorAll(sel)];
@@ -447,7 +480,7 @@ class IFoodScraper:
 
             return { restaurant, date, status, items, ...priceRows };
         }
-        """)
+        """, None)
 
         if not result or not result.get("restaurant"):
             return None
@@ -718,6 +751,9 @@ class IFoodScraper:
             if missing:
                 log.info(f"Raspando detalhe de {len(missing)} pedidos restantes…")
                 for i, oid in enumerate(missing, 1):
+                    if self._browser_closed:
+                        log.warning(f"⚠ Fallback de DOM interrompido em {i - 1}/{len(missing)} — janela fechada.")
+                        break
                     log.info(f"  [{i}/{len(missing)}] {oid}")
                     dom_data = await self._dom_scrape_detail(page, oid)
                     if dom_data:
