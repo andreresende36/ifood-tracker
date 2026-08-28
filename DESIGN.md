@@ -24,6 +24,12 @@ typography:
     fontWeight: 700
     lineHeight: "52.8px"
     letterSpacing: "normal"
+  section:
+    fontFamily: "Source Sans, system-ui, -apple-system, sans-serif"
+    fontSize: "28px"
+    fontWeight: 600
+    lineHeight: "normal"
+    letterSpacing: "-0.14px"
   headline:
     fontFamily: "Source Sans, system-ui, -apple-system, sans-serif"
     fontSize: "20px"
@@ -187,8 +193,10 @@ de leitura, uma fonte que chama atenção para si rouba do número.
 
 ### Hierarchy
 - **Display** (700, 44px/52.8px): o título da tela, uma vez por página.
-- **Headline** (600, 20px/24px, −0.1px): título de seção ("Análise temporal").
-- **Title** (600, 18px/21.6px, −0.09px): título de bloco dentro da seção.
+- **Section** (600, 28px, −0.14px): título de seção na coluna de conteúdo
+  ("E se você tivesse cozinhado em casa?"). Sai como `h2`.
+- **Headline** (600, 20px/24px, −0.1px): título de seção da sidebar ("Filtros").
+- **Title** (600, 18px/21.6px, −0.09px): título de bloco dentro da seção, `h3`.
 - **Metric** (700, 26.4px, −0.02em): o valor do KPI. O tracking negativo
   aperta os dígitos para o número ler como uma unidade, não como uma fileira.
 - **Body** (400, 14px/22.4px): texto corrido, legendas, ajuda.
@@ -202,6 +210,11 @@ de leitura, uma fonte que chama atenção para si rouba do número.
 **A Regra do Rótulo que Recua.** No par rótulo/valor, o rótulo vai a 72% de
 opacidade e o valor fica em 700. Se os dois saem no mesmo tom, o olho tem que
 escolher — e a varredura para.
+
+**A Regra do Nível.** Seção é `h2`, bloco é `h3`, e o CSS de ritmo mira os
+dois. Uma seção escrita como `h3` herda o ritmo de bloco e o ritmo de seção
+vira regra que não casa com nada — foi o que aconteceu com as seis seções
+originais, todas em `st.subheader`.
 
 **A Regra da Moeda.** Dinheiro sai em formato brasileiro — ponto no milhar,
 vírgula no decimal (`R$ 1.724,05`). Vale para texto, rótulo de barra, tick de
@@ -228,6 +241,15 @@ Densidade segue a prioridade, não a simetria: três KPIs primários com valor
 cheio em colunas iguais, e as duas grandezas de apoio (cupons, taxas) descem
 para uma linha de legenda. Cinco tiles iguais numa linha é default de
 framework — e no espaço disponível truncava o próprio número.
+
+Quatro seções, não seis. O topo — sinal do mês, KPIs, linha do contrafactual —
+responde as duas perguntas com que a sessão começa, e um único fio separa esse
+resumo da análise. Entre as seções o trabalho é do espaço e do degrau de
+título: fio em toda troca de assunto vira grade.
+
+Assunto que não sustenta o peso de uma seção vira painel de um seletor que já
+existe (faixa de valor entrou em "Quando e quanto"). O critério é o conteúdo,
+não a arrumação.
 
 Painéis de análise são um seletor + um painel montado sob demanda, nunca todos
 de uma vez: painel oculto tem container de largura zero, e gráfico renderizado
@@ -317,12 +339,29 @@ alguma coisa.
 Nenhum número deste bloco se repete no bloco de KPIs logo abaixo — o que ele
 traz é a comparação, não o total.
 
+### Savings Line
+A irmã da Signal Line, logo abaixo dos KPIs: responde a segunda pergunta da
+sessão — "dava para ter cozinhado?" — sem obrigar a rolar até a seção.
+
+Corpo de texto em tinta recuada, com o valor evitável em Economia e peso 600:
+pesa mais que a legenda de cupons e taxas logo acima, menos que o sinal do mês
+logo abaixo do título. Diz que é estimativa e aponta para a conta completa.
+
 ### Chart Frame
 Todo gráfico compartilha o mesmo cromo: fundo transparente, grade
 `{colors.chart-grid}`, eixo `{colors.chart-axis}`, texto `{colors.ink-muted}`,
 título em 15px `#e6e8ec`, e **nenhum título de eixo** — o título do gráfico já
 nomeia a grandeza. Rótulo direto na marca só até 8 marcas; acima disso, eixo e
 hover carregam o valor.
+
+Na barra horizontal o rótulo é `auto`, não `outside`: a maior barra empurra o
+número para fora da área de plotagem e ele sai recortado no estreito. Com
+`auto`, barra larga leva o número por dentro, em tinta da superfície; barra
+curta escreve do lado de fora, em tinta recuada.
+
+A barra de ferramentas do Plotly não aparece (`displayModeBar: False`). Zoom e
+lasso não servem a um painel de agregados, e em 375px a barra pousa por cima do
+título do próprio gráfico.
 
 ## Do's and Don'ts
 
@@ -340,6 +379,8 @@ hover carregam o valor.
 - **Do** declarar na tela quando o número é estimativa.
 - **Do** comparar períodos como-por-como: o mês parcial vai contra o mesmo
   recorte de dias dos meses anteriores, nunca contra meses cheios.
+- **Do** manter o veredito das perguntas da sessão no topo, em uma frase cada,
+  com a profundidade nas seções abaixo.
 
 ### Don't:
 - **Don't** introduzir um quarto matiz de dado. Acima de três categorias,
@@ -356,3 +397,6 @@ hover carregam o valor.
 - **Don't** repetir num painel um valor que o bloco de KPIs já mostra.
 - **Don't** emitir a mesma legenda dentro de cada coluna de um par: a nota que
   vale para a linha inteira sai uma vez, antes de abrir as colunas.
+- **Don't** pintar de vermelho um desfecho bom. O chip de delta da economia
+  saía em vermelho com seta para cima — alarme onde não há alarme.
+- **Don't** deixar a barra de ferramentas do Plotly visível.

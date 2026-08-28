@@ -45,8 +45,13 @@ st.markdown("""
     /* Ritmo: respiro generoso ANTES do título de seção e apertado depois dele,
        para o cabeçalho grudar no próprio conteúdo em vez de flutuar no meio. */
     .block-container { padding-top: 2.25rem; }
-    .block-container h2 { margin-top: 2.5rem; margin-bottom: 0.75rem; }
-    .block-container h3 { margin-top: 1.75rem; margin-bottom: 0.5rem; }
+    /* Seção é h2 e bloco é h3 — e o CSS mira os dois. Antes toda seção saía
+       como h3 e herdava o ritmo de bloco: a regra de h2 nunca casava com
+       nada na coluna de conteúdo, e o ritmo de seção era letra morta. */
+    .block-container h2 { margin-top: 2.5rem; margin-bottom: 0.75rem;
+                          font-size: 28px; font-weight: 600; letter-spacing: -0.14px; }
+    .block-container h3 { margin-top: 1.75rem; margin-bottom: 0.5rem;
+                          font-size: 18px; font-weight: 600; letter-spacing: -0.09px; }
     .block-container h1 + div [data-testid="stCaptionContainer"] { margin-top: -0.35rem; }
 
     /* O valor do KPI é o que se lê na varredura; o rótulo recua. */
@@ -539,6 +544,12 @@ def show_month_signal(orders_df: pd.DataFrame):
 
 # ── Chart helpers ─────────────────────────────────────────────────────────────
 
+# A barra de ferramentas do Plotly (zoom, lasso, "download plot as png") é
+# cromo de outro sistema: não serve a um painel de agregados, e em 375px ela
+# pousa POR CIMA do título do gráfico. Some — o dado fica.
+PLOT_CONFIG = {"displayModeBar": False}
+
+
 def _cromo(fig):
     """Grade/eixos em fio recessivo e fundo transparente sobre o tema."""
     fig.update_layout(
@@ -571,8 +582,13 @@ def _bar(df, x, y, title, color=DINHEIRO, text=None, xtype=None, orient=None):
                  text=text, orientation=orient)
     fig.update_traces(
         marker_color=color,
-        textposition="outside",
+        # "auto" e não "outside": na barra horizontal, a maior barra empurra o
+        # rótulo para fora da área de plotagem e ele sai recortado no estreito
+        # ("R$ 1…"). Com auto, quem tem barra larga leva o número por dentro e
+        # só as curtas escrevem do lado de fora.
+        textposition="auto" if orient == "h" else "outside",
         textfont=dict(color=INK_MUTE),
+        insidetextfont=dict(color=SURFACE),
         # 2px de respiro entre barras vizinhas em vez de borda desenhada
         marker_line_color=SURFACE, marker_line_width=2,
     )
@@ -608,7 +624,8 @@ def _nota_periodo_unico(df, x) -> bool:
 def _barra(alvo, df, x, y, title, color=DINHEIRO, text=None, **kw):
     """Uma barra do par lado a lado, dentro da coluna que a recebe."""
     alvo.plotly_chart(
-        _bar(df, x, y, title, color=color, text=text, **kw), width="stretch"
+        _bar(df, x, y, title, color=color, text=text, **kw),
+        width="stretch", config=PLOT_CONFIG,
     )
 
 
@@ -639,12 +656,19 @@ def _abas(opcoes: list, key: str) -> str:
 
 
 def temporal_charts(df: pd.DataFrame):
-    st.subheader(":material/timeline: Análise temporal")
+    # "Quando e quanto" e não "Análise temporal": a faixa de valor entrou como
+    # painel, e ela não é um recorte de tempo — é de tamanho de pedido.
+    st.header(":material/insights: Quando e quanto")
 
     aba = _abas(
-        ["Por ano", "Por mês", "Dia da semana", "Heatmap", "Ticket médio"],
+        ["Por ano", "Por mês", "Dia da semana", "Heatmap", "Ticket médio",
+         "Faixa de valor"],
         key="aba_temporal",
     )
+
+    if aba == "Faixa de valor":
+        _painel_faixa(df)
+        return
 
     if aba == "Por ano":
         if df["year"].isna().all():
@@ -702,12 +726,12 @@ def temporal_charts(df: pd.DataFrame):
             c1, c2 = st.columns(2)
             c1.plotly_chart(
                 _bar(by_month, "month_name", "total", "Gasto médio por mês do ano (R$)"),
-                width="stretch",
+                width="stretch", config=PLOT_CONFIG,
             )
             c2.plotly_chart(
                 _bar(by_month, "month_name", "pedidos", "Total de pedidos por mês do ano",
                      color=PEDIDOS),
-                width="stretch",
+                width="stretch", config=PLOT_CONFIG,
             )
 
     elif aba == "Dia da semana":
@@ -726,15 +750,15 @@ def temporal_charts(df: pd.DataFrame):
         c1, c2, c3 = st.columns(3)
         c1.plotly_chart(
             _bar(by_dow, "day_name", "total", "Gasto total por dia (R$)"),
-            width="stretch",
+            width="stretch", config=PLOT_CONFIG,
         )
         c2.plotly_chart(
             _bar(by_dow, "day_name", "pedidos", "Pedidos por dia", color=PEDIDOS),
-            width="stretch",
+            width="stretch", config=PLOT_CONFIG,
         )
         c3.plotly_chart(
             _bar(by_dow, "day_name", "ticket", "Ticket médio por dia (R$)", color=DINHEIRO),
-            width="stretch",
+            width="stretch", config=PLOT_CONFIG,
         )
 
     elif aba == "Heatmap":
@@ -773,7 +797,7 @@ def temporal_charts(df: pd.DataFrame):
         )
         fig.update_layout(title="Pedidos por dia da semana × hora",
                           template=PLOTLY_TEMPLATE)
-        st.plotly_chart(_cromo(fig), width="stretch")
+        st.plotly_chart(_cromo(fig), width="stretch", config=PLOT_CONFIG)
 
     elif aba == "Ticket médio":
         dfd = df[df["ordered_at"].notna()].copy()
@@ -790,14 +814,21 @@ def temporal_charts(df: pd.DataFrame):
         )
         st.plotly_chart(
             _line(by_p, "period", "ticket_medio", "Evolução do ticket médio (R$)"),
-            width="stretch",
+            width="stretch", config=PLOT_CONFIG,
         )
 
 
 # ── Price distribution ────────────────────────────────────────────────────────
 
-def price_distribution(df: pd.DataFrame):
-    st.subheader(":material/bar_chart: Distribuição por faixa de valor")
+def _painel_faixa(df: pd.DataFrame):
+    """
+    Faixa de valor como painel do seletor, não como seção própria.
+
+    Era a menor seção da tela e carregava um nível de título igual ao do
+    contrafactual — peso de estrutura que o conteúdo não sustentava. Como
+    painel, divide o seletor com os recortes de tempo e some da rolagem
+    quando ninguém pediu.
+    """
     if df.empty:
         return
 
@@ -816,12 +847,12 @@ def price_distribution(df: pd.DataFrame):
     c1.plotly_chart(
         _bar(pr_data, "price_range", "pedidos", "Pedidos por faixa",
              color=PEDIDOS, text=pr_data["pedidos"]),
-        width="stretch",
+        width="stretch", config=PLOT_CONFIG,
     )
     c2.plotly_chart(
         _bar(pr_data, "price_range", "total", "Gasto total por faixa (R$)",
              text=pr_data["total"].apply(lambda v: _brl(v, 0))),
-        width="stretch",
+        width="stretch", config=PLOT_CONFIG,
     )
 
 
@@ -888,8 +919,61 @@ def _items_savings(items_df: pd.DataFrame, scale: float) -> pd.DataFrame:
     return out
 
 
+def _economia_evitavel(df: pd.DataFrame, items_df: pd.DataFrame, escala: float):
+    """
+    A conta do contrafactual, isolada porque tem dois consumidores: a linha do
+    topo e a seção inteira. Devolve (economia total, economia nos pratos,
+    taxas, custo em casa, total pago).
+
+    Taxa de entrega e serviço entram por inteiro — cozinhar em casa não tem
+    entregador. A economia dos pratos é estimativa por tipo, escalada pelo
+    controle de otimismo.
+    """
+    sav = _items_savings(items_df, escala)
+    food_saved = sav["saved"].sum()
+    fees = df["delivery_fee"].sum() + df["service_fee"].sum()
+    total_saved = food_saved + fees
+    total_pago = df["total"].sum()
+    return sav, total_saved, food_saved, fees, total_pago - total_saved, total_pago
+
+
+# Chave do controle de otimismo. A linha do topo é desenhada ANTES da seção que
+# tem o slider, então lê o valor pela session_state e cai no padrão na primeira
+# renderização da sessão.
+OTIMISMO_KEY = "otimismo_estimativa"
+
+
+def show_savings_line(df: pd.DataFrame, items_df: pd.DataFrame):
+    """
+    A segunda pergunta da sessão — "dava para ter cozinhado?" — respondida no
+    topo, em uma frase.
+
+    A seção inteira fica onde está, com os gráficos e o prato a prato; o que
+    sobe é só o veredito, porque duas telas de rolagem é longe demais para a
+    pergunta que é a razão de ser do produto.
+    """
+    if df.empty or items_df.empty:
+        return
+    escala = st.session_state.get(OTIMISMO_KEY, 100) / 100
+    _, total_saved, _, _, _, total_pago = _economia_evitavel(df, items_df, escala)
+    if total_pago <= 0:
+        return
+    pct = total_saved / total_pago * 100
+    # Caption puro deixaria o veredito do contrafactual com o mesmo peso da
+    # linha de cupons e taxas logo acima — a pergunta que é a razão de ser do
+    # produto lida como nota de rodapé. Fica em corpo de texto, com o valor em
+    # Economia: pesa mais que a legenda, menos que o sinal do mês.
+    st.markdown(
+        f'<p style="font-size:14px;line-height:22.4px;color:{INK_MUTE};margin:.35rem 0 0">'
+        f'Desse total, <span style="color:{ECONOMIA};font-weight:600">'
+        f'cerca de {_brl(total_saved, 0)} era evitável</span> — {pct:.0f}% do que '
+        f'foi pago, cozinhando em casa. Estimativa; a conta está logo abaixo.</p>',
+        unsafe_allow_html=True,
+    )
+
+
 def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
-    st.subheader(":material/skillet: E se você tivesse cozinhado em casa?")
+    st.header(":material/skillet: E se você tivesse cozinhado em casa?")
     if df.empty:
         st.info("Sem dados.")
         return
@@ -907,21 +991,19 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
     scale = st.slider(
         "Otimismo da estimativa (ajusta todos os percentuais)",
         min_value=50, max_value=150, value=100, step=10, format="%d%%",
+        key=OTIMISMO_KEY,
         help="100% = percentuais padrão por tipo de prato. 150% = mais otimista.",
     )
-    sav = _items_savings(items_df, scale / 100)
-
-    food_saved = sav["saved"].sum()
-    home_food  = sav["home_cost"].sum()
-    fees       = df["delivery_fee"].sum() + df["service_fee"].sum()
-    total_saved = food_saved + fees
-    total_pago = df["total"].sum()
-    home_total = total_pago - total_saved
+    sav, total_saved, food_saved, fees, home_total, total_pago = _economia_evitavel(
+        df, items_df, scale / 100
+    )
+    home_food = sav["home_cost"].sum()
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Economia total",      _brl(total_saved),
-              f"−{(total_saved/total_pago*100) if total_pago else 0:.0f}% do que pagou",
-              delta_color="inverse")
+    # Sem chip de delta: economizar é o desfecho bom, e o chip saía em vermelho
+    # com seta para cima — alarme onde não há alarme. A porcentagem já está na
+    # linha do topo da tela, no lugar certo.
+    c1.metric("Economia total",      _brl(total_saved))
     c2.metric("Custo cozinhando",    _brl(home_total))
     c3.metric("Economia nos pratos", _brl(food_saved))
     c4.metric("Taxas evitadas",      _brl(fees))
@@ -940,7 +1022,7 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
               "Economia estimada por tipo de prato (R$)", color=ECONOMIA,
               text=por_econ["economia"].apply(lambda v: _brl(v, 0)), orient="h")
     f1.update_layout(yaxis_title="")
-    c1.plotly_chart(f1, width="stretch")
+    c1.plotly_chart(f1, width="stretch", config=PLOT_CONFIG)
 
     comp = pd.DataFrame({
         "cenário": ["Pago no iFood", "Cozinhando em casa"],
@@ -955,10 +1037,11 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
     fig2.update_traces(textposition="outside", textfont=dict(color=INK_MUTE),
                        marker_line_color=SURFACE, marker_line_width=2)
     fig2.update_layout(showlegend=False, xaxis_title="")
-    c2.plotly_chart(_cromo(fig2), width="stretch")
+    c2.plotly_chart(_cromo(fig2), width="stretch", config=PLOT_CONFIG)
 
     # Top pratos: o que mais te custou X e quanto seria o Y
-    with st.expander("🔎 Ver economia prato a prato (top 30)"):
+    with st.expander("Ver economia prato a prato (top 30)",
+                     icon=":material/search:"):
         top = (
             sav.groupby(["item_name", "dish_cat"])
             .agg(qtd=("quantity", "sum"), pago=("paid", "sum"),
@@ -987,7 +1070,7 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
 # ── Restaurants & items ───────────────────────────────────────────────────────
 
 def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
-    st.subheader(":material/storefront: Restaurantes e itens")
+    st.header(":material/storefront: Restaurantes e itens")
     aba = _abas(
         ["Por categoria", "Top restaurantes", "Itens mais pedidos", "Distribuição de custos"],
         key="aba_restaurantes",
@@ -1011,12 +1094,12 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
             c1.plotly_chart(
                 _bar(by_cat, "category", "total", "Gasto por categoria (R$)",
                      text=by_cat["total"].apply(lambda v: _brl(v, 0))),
-                width="stretch",
+                width="stretch", config=PLOT_CONFIG,
             )
             c2.plotly_chart(
                 _bar(by_cat, "category", "pedidos", "Nº de pedidos por categoria",
                      color=PEDIDOS, text=by_cat["pedidos"]),
-                width="stretch",
+                width="stretch", config=PLOT_CONFIG,
             )
 
             disp = by_cat.copy()
@@ -1041,13 +1124,13 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
         f1 = _bar(by_rest.sort_values("pedidos"), "pedidos", "restaurant_name",
                   "Por frequência", color=PEDIDOS, text="pedidos", orient="h")
         f1.update_layout(yaxis_title="")
-        c1.plotly_chart(f1, width="stretch")
+        c1.plotly_chart(f1, width="stretch", config=PLOT_CONFIG)
 
         por_valor = by_rest.sort_values("total")
         f2 = _bar(por_valor, "total", "restaurant_name", "Por valor gasto (R$)",
                   text=por_valor["total"].apply(lambda v: _brl(v, 0)), orient="h")
         f2.update_layout(yaxis_title="")
-        c2.plotly_chart(f2, width="stretch")
+        c2.plotly_chart(f2, width="stretch", config=PLOT_CONFIG)
 
     elif aba == "Itens mais pedidos":
         if items_df.empty:
@@ -1066,7 +1149,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
                    f"Top {top_n_i} itens mais pedidos (quantidade)",
                    color=PEDIDOS, text="total_qty", orient="h")
         fig.update_layout(yaxis_title="")
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, width="stretch", config=PLOT_CONFIG)
 
     elif aba == "Distribuição de custos":
         if df.empty:
@@ -1112,7 +1195,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
             showlegend=True,
             legend=dict(orientation="h", y=-0.05, font=dict(color=INK_MUTE)),
         )
-        st.plotly_chart(_cromo(fig), width="stretch")
+        st.plotly_chart(_cromo(fig), width="stretch", config=PLOT_CONFIG)
         st.caption(
             f"Itens (bruto): {_brl(total_subtotal, md=True)}  ·  "
             f"Economia em cupons: −{_brl(total_discount, md=True)}  →  "
@@ -1184,7 +1267,7 @@ def _render_log_tail(box, path: Path, n: int = 14):
 # ── Orders table ──────────────────────────────────────────────────────────────
 
 def orders_table(df: pd.DataFrame):
-    st.subheader(":material/table_rows: Tabela de pedidos")
+    st.header(":material/table_rows: Tabela de pedidos")
     if df.empty:
         st.info("Nenhum pedido encontrado com os filtros atuais.")
         return
@@ -1321,20 +1404,23 @@ def main():
     filtered_items = items_df[items_df["order_id"].isin(filtered["id"])] if not items_df.empty else pd.DataFrame()
 
     st.divider()
-    # Sinal antes dos KPIs, e sobre o histórico INTEIRO (orders_df, não
-    # filtered): a pergunta que abre a tela é "gastamos demais este mês?",
-    # e ela não tem resposta dentro do recorte do próprio mês.
+
+    # O topo responde as duas perguntas com que a sessão começa: "gastamos
+    # demais este mês?" e "dava para ter cozinhado?". A primeira vem do
+    # histórico INTEIRO (orders_df, não filtered) — dentro do recorte do
+    # próprio mês ela não tem resposta. A segunda é o veredito da seção que
+    # vem logo abaixo, que sozinha ficava a duas telas de rolagem.
     show_month_signal(orders_df)
     show_kpis(filtered)
+    show_savings_line(filtered, filtered_items)
+
     st.divider()
-    temporal_charts(filtered)
-    st.divider()
-    price_distribution(filtered)
-    st.divider()
+
+    # Uma linha só separa o resumo da análise. Entre as seções o trabalho é do
+    # espaço e do degrau de título — fio em toda troca de assunto vira grade.
     cooking_savings(filtered, filtered_items)
-    st.divider()
+    temporal_charts(filtered)
     restaurant_item_charts(filtered, filtered_items)
-    st.divider()
     orders_table(filtered)
 
 

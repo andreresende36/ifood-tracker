@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-28T21:55:00Z",
+  "generatedAt": "2026-08-28T22:40:00Z",
   "title": "Design System: iFood Order Tracker",
   "extensions": {
     "colorMeta": {
@@ -45,7 +45,8 @@
     },
     "typographyMeta": {
       "display": { "displayName": "Display", "purpose": "Título da tela, uma vez por página." },
-      "headline": { "displayName": "Headline", "purpose": "Título de seção." },
+      "section": { "displayName": "Section", "purpose": "Título de seção na coluna de conteúdo. Sai como h2 — é o nível que o CSS de ritmo mira." },
+      "headline": { "displayName": "Headline", "purpose": "Título de seção da sidebar." },
       "title": { "displayName": "Title", "purpose": "Título de bloco dentro da seção." },
       "metric": { "displayName": "Metric", "purpose": "Valor do KPI. Tracking negativo aperta os dígitos para o número ler como unidade." },
       "body": { "displayName": "Body", "purpose": "Texto corrido, legendas, ajuda." },
@@ -125,6 +126,14 @@
       "css": ".ds-signal { margin:0 0 .25rem; font:600 20px/24px \"Source Sans\", system-ui, sans-serif; letter-spacing:-0.1px; color:#e6e8ec; } .ds-signal-icon { color:#ea1d2c; vertical-align:-4px; margin-right:.4rem; } .ds-signal-verdict { color:#ea1d2c; } .ds-signal-note { margin:0; font:400 14px/22.4px \"Source Sans\", system-ui, sans-serif; color:#8b8f9a; } .ds-signal-note strong { color:#8b8f9a; font-weight:600; }"
     },
     {
+      "name": "Savings Line",
+      "kind": "custom",
+      "refersTo": "metric-tile",
+      "description": "A irmã da Signal Line, abaixo dos KPIs: o veredito do contrafactual em uma frase, valor em Economia, sem obrigar a rolar até a seção.",
+      "html": "<p class=\"ds-savings\">Desse total, <span class=\"ds-savings-value\">cerca de R$ 987 era evitável</span> — 57% do que foi pago, cozinhando em casa. Estimativa; a conta está logo abaixo.</p>",
+      "css": ".ds-savings { margin:.35rem 0 0; font:400 14px/22.4px \"Source Sans\", system-ui, sans-serif; color:#8b8f9a; } .ds-savings-value { color:#199e70; font-weight:600; }"
+    },
+    {
       "name": "Chart Frame",
       "kind": "custom",
       "refersTo": "metric-tile",
@@ -150,6 +159,7 @@
       { "name": "A Regra do Rótulo que Recua", "body": "No par rótulo/valor, o rótulo vai a 72% de opacidade e o valor fica em 700. Se os dois saem no mesmo tom, o olho tem que escolher — e a varredura para.", "section": "typography" },
       { "name": "A Regra do Dígito", "body": "tabular-nums só onde números se alinham na vertical (tabela, ticks de eixo). No valor grande e solto do KPI, figuras proporcionais: dígitos de largura fixa fazem 121 parecer frouxo em corpo grande.", "section": "typography" },
       { "name": "A Regra do Tom, não da Sombra", "body": "Elevação se expressa por camada de cor e fio de 1px. Nenhum elemento ganha box-shadow — nem em repouso, nem em hover. Se dois blocos precisam se separar, o caminho é tom ou espaço, nunca profundidade simulada.", "section": "elevation" },
+      { "name": "A Regra do Nível", "body": "Seção é h2, bloco é h3, e o CSS de ritmo mira os dois. Uma seção escrita como h3 herda o ritmo de bloco e o ritmo de seção vira regra que não casa com nada — foi o que aconteceu com as seis seções originais, todas em st.subheader.", "section": "typography" },
       { "name": "A Regra da Moeda", "body": "Dinheiro sai em formato brasileiro — ponto no milhar, vírgula no decimal (R$ 1.724,05). Vale para texto, rótulo de barra, tick de eixo e hover; os três últimos são formatados pelo Plotly, que precisa de separators=\",.\" no layout. O padrão do Python é o americano, e uma tela em português com R$ 1,724.05 denuncia que ninguém olhou.", "section": "typography" }
     ],
     "dos": [
@@ -160,7 +170,8 @@
       "Do escapar R\\$ em texto markdown — dois cifrões na mesma string viram delimitador de LaTeX e o Streamlit engole o trecho entre eles.",
       "Do montar só o painel selecionado; painel oculto tem largura zero e quebra o cálculo de área do gráfico.",
       "Do declarar na tela quando o número é estimativa.",
-      "Do comparar períodos como-por-como: o mês parcial vai contra o mesmo recorte de dias dos meses anteriores, nunca contra meses cheios."
+      "Do comparar períodos como-por-como: o mês parcial vai contra o mesmo recorte de dias dos meses anteriores, nunca contra meses cheios.",
+      "Do manter o veredito das perguntas da sessão no topo, em uma frase cada, com a profundidade nas seções abaixo."
     ],
     "donts": [
       "Don't introduzir um quarto matiz de dado. Acima de três categorias, o formato muda (barra), não a paleta.",
@@ -168,6 +179,9 @@
       "Don't trocar backgroundColor do tema sem revalidar a paleta inteira — o contraste e a separação para daltonismo foram medidos contra #0e1117.",
       "Don't pôr emoji no lugar de ícone.",
       "Don't emitir a mesma legenda dentro de cada coluna de um par: a nota que vale para a linha inteira sai uma vez, antes de abrir as colunas.",
+      "Don't pintar de vermelho um desfecho bom. O chip de delta da economia saía em vermelho com seta para cima — alarme onde não há alarme.",
+      "Don't deixar a barra de ferramentas do Plotly visível.",
+      "Don't usar textposition outside em barra horizontal: a maior barra empurra o rótulo para fora da área de plotagem e ele sai recortado no estreito.",
       "Don't desenhar borda em volta de marca de dado; o respiro de 2px na cor da superfície faz esse trabalho.",
       "Don't rotular toda barra de uma série longa nem toda fatia de uma rosca: acima de 8 marcas, ou abaixo de 8% de uma fatia, o rótulo é recortado.",
       "Don't deixar mais de uma ação preenchida em vermelho por tela.",
