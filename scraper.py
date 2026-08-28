@@ -247,11 +247,38 @@ class IFoodScraper:
 
     # ── Page interactions ────────────────────────────────────────────────────
 
+    async def _safe_eval(self, page: Page, expr: str, default=None):
+        """
+        page.evaluate() que não derruba a coleta.
+
+        Duas falhas reais já aconteceram aqui: a página navegar no meio da
+        avaliação ("Execution context was destroyed") e a janela do Chrome ser
+        fechada ("Target page, context or browser has been closed"). A primeira
+        é transitória e basta repetir; a segunda não tem o que tentar — devolve
+        o default para o scraper seguir e gravar o que já coletou.
+        """
+        for tentativa in (1, 2):
+            try:
+                return await page.evaluate(expr)
+            except Exception as e:
+                motivo = str(e).splitlines()[0]
+                if "closed" in motivo.lower():
+                    log.warning("⚠ Janela do Chrome fechada — seguindo com o que já foi coletado.")
+                    return default
+                if tentativa == 1:
+                    log.warning(f"⚠ Contexto perdido (navegação?); tentando de novo: {motivo}")
+                    await asyncio.sleep(1.5)
+                    continue
+                log.warning(f"⚠ Persistiu o erro, seguindo sem este passo: {motivo}")
+        return default
+
     async def _scroll_and_wait(self, page: Page) -> bool:
-        old = await page.evaluate("document.body.scrollHeight")
-        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        # default 0 nos dois lados: se a página sumiu, new > old é falso e o
+        # laço de scroll encerra em vez de estourar exceção.
+        old = await self._safe_eval(page, "document.body.scrollHeight", 0)
+        await self._safe_eval(page, "window.scrollTo(0, document.body.scrollHeight)")
         await asyncio.sleep(REQUEST_DELAY)
-        new = await page.evaluate("document.body.scrollHeight")
+        new = await self._safe_eval(page, "document.body.scrollHeight", 0)
         return new > old
 
     async def _click_load_more(self, page: Page) -> bool:
@@ -337,7 +364,8 @@ class IFoodScraper:
     # ── DOM fallback ─────────────────────────────────────────────────────────
 
     async def _dom_order_ids(self, page: Page) -> list[str]:
-        return await page.evaluate("""
+        # Fallback opcional: se falhar, a coleta via API já foi persistida.
+        return await self._safe_eval(page, """
         () => {
             const ids = new Set();
             document.querySelectorAll('a[href*="/pedidos/"]').forEach(a => {
@@ -350,7 +378,7 @@ class IFoodScraper:
             });
             return [...ids];
         }
-        """)
+        """, []) or []
 
     async def _dom_scrape_detail(self, page: Page, order_id: str) -> dict | None:
         url = f"https://www.ifood.com.br/pedidos/{order_id}"
@@ -662,15 +690,10 @@ class IFoodScraper:
                     "   Tentando fallback por DOM…"
                 )
 
-            # DOM fallback for IDs missed by API interception
-            dom_ids = await self._dom_order_ids(page)
-            missing = [
-                oid for oid in dom_ids
-                if oid not in self._api_orders and not self.db.order_exists(oid)
-            ]
-            log.info(f"DOM encontrou {len(dom_ids)} IDs; {len(missing)} precisam de detalhe")
-
-            # Salva/atualiza todos os pedidos (upsert — corrige existentes)
+            # Salva/atualiza todos os pedidos (upsert — corrige existentes).
+            # ANTES do fallback de DOM de propósito: aquele passo depende da
+            # página continuar viva, e uma janela fechada ali já fez perder
+            # 81 pedidos que estavam só na memória.
             saved = updated = 0
             for raw in self._api_orders.values():
                 order = self._normalize(raw)
@@ -682,6 +705,14 @@ class IFoodScraper:
                     saved += 1
                 self.db.save_order(order)
             log.info(f"Persistidos: {saved} novos, {updated} atualizados")
+
+            # DOM fallback for IDs missed by API interception
+            dom_ids = await self._dom_order_ids(page)
+            missing = [
+                oid for oid in dom_ids
+                if oid not in self._api_orders and not self.db.order_exists(oid)
+            ]
+            log.info(f"DOM encontrou {len(dom_ids)} IDs; {len(missing)} precisam de detalhe")
 
             # DOM fallback scraping
             if missing:
