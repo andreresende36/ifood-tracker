@@ -104,22 +104,17 @@
     doc.body.prepend(a);
   }
 
-  // ── 6. Reflow dos gráficos ao redimensionar ───────────────────────────────
-  // O Plotly guarda a largura de quando desenhou. Redimensionar a janela sem
-  // recarregar deixava o gráfico com a largura antiga dentro de uma coluna
-  // nova. Só o reload corrigia.
-  let reflowTimer = null;
-  function reflow() {
-    const Plotly = window.parent.Plotly;
-    if (!Plotly || !Plotly.Plots) return;
-    doc.querySelectorAll(".js-plotly-plot").forEach((el) => {
-      try { Plotly.Plots.resize(el); } catch (_) {}
-    });
-  }
-  window.parent.addEventListener("resize", () => {
-    clearTimeout(reflowTimer);
-    reflowTimer = setTimeout(reflow, 150);
-  });
+  // ── 6. Reflow dos gráficos ao redimensionar — NÃO RESOLVIDO ──────────────
+  // Tentado e removido, para não deixar código que não faz nada:
+  //   Plotly.Plots.resize(el)  → roda sem erro e não muda o SVG: ele relê a
+  //                              largura do próprio div, que segue a antiga.
+  //   Plotly.relayout(el, {width})  → funciona quando chamado à mão com uma
+  //                              largura MENOR, e não quando o container
+  //                              cresce; o Streamlit parece reimpor a largura.
+  // Quem redimensiona a janela sem recarregar fica com o gráfico na largura
+  // anterior. Recarregar corrige. A cena de uso (desktop, sessão deliberada)
+  // torna isso raro, e a correção de verdade provavelmente é do lado do
+  // Python, forçando o Streamlit a redesenhar.
 
   function aplicar() {
     const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);

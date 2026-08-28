@@ -443,6 +443,11 @@ seleção só na cor, ausência de marco `main`. O projeto não convive com isso
 `static/localize.html` roda no documento pai e corrige idioma, atributos,
 `aria-pressed`, marco e atalho de teclado.
 
+O que essa costura **não** alcança: o reflow dos gráficos ao redimensionar a
+janela sem recarregar. `Plotly.Plots.resize` não move nada e `Plotly.relayout`
+só obedece quando o container encolhe — o Streamlit reimpõe a largura. Fica
+como limitação conhecida, e recarregar corrige.
+
 Duas pegadinhas de cache mordem quem editar esse arquivo: o servidor estático
 do Streamlit **fixa o tamanho no start** (editar com o servidor no ar serve o
 conteúdo novo truncado no tamanho velho, e o script quebra no meio sem erro
