@@ -200,7 +200,7 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     st.sidebar.button(
         "🧹 Limpar todos os filtros",
         on_click=_clear_filters,
-        use_container_width=True,
+        width="stretch",
     )
 
     # ── Filtro temporal: Ano + Mês (multiselects, não conflitam) ──────────────
@@ -393,12 +393,12 @@ def temporal_charts(df: pd.DataFrame):
         c1.plotly_chart(
             _bar(by_year, "year", "total", "Gasto por ano (R$)",
                  text=by_year["total"].apply(lambda v: f"R${v:,.0f}"), xtype="category"),
-            use_container_width=True,
+            width="stretch",
         )
         c2.plotly_chart(
             _bar(by_year, "year", "pedidos", "Pedidos por ano",
                  color="#3b82f6", text=by_year["pedidos"], xtype="category"),
-            use_container_width=True,
+            width="stretch",
         )
 
     elif aba == "Por mês":
@@ -421,11 +421,11 @@ def temporal_charts(df: pd.DataFrame):
             c1, c2 = st.columns(2)
             c1.plotly_chart(
                 _bar(by_period, "period", "total", "Gasto por mês (R$)"),
-                use_container_width=True,
+                width="stretch",
             )
             c2.plotly_chart(
                 _bar(by_period, "period", "pedidos", "Pedidos por mês", color="#3b82f6"),
-                use_container_width=True,
+                width="stretch",
             )
         else:
             by_month = (
@@ -440,12 +440,12 @@ def temporal_charts(df: pd.DataFrame):
             c1, c2 = st.columns(2)
             c1.plotly_chart(
                 _bar(by_month, "month_name", "total", "Gasto médio por mês do ano (R$)"),
-                use_container_width=True,
+                width="stretch",
             )
             c2.plotly_chart(
                 _bar(by_month, "month_name", "pedidos", "Total de pedidos por mês do ano",
                      color="#3b82f6"),
-                use_container_width=True,
+                width="stretch",
             )
 
     elif aba == "Dia da semana":
@@ -464,15 +464,15 @@ def temporal_charts(df: pd.DataFrame):
         c1, c2, c3 = st.columns(3)
         c1.plotly_chart(
             _bar(by_dow, "day_name", "total", "Gasto total por dia (R$)"),
-            use_container_width=True,
+            width="stretch",
         )
         c2.plotly_chart(
             _bar(by_dow, "day_name", "pedidos", "Pedidos por dia", color="#3b82f6"),
-            use_container_width=True,
+            width="stretch",
         )
         c3.plotly_chart(
             _bar(by_dow, "day_name", "ticket", "Ticket médio por dia (R$)", color="#10b981"),
-            use_container_width=True,
+            width="stretch",
         )
 
     elif aba == "Heatmap":
@@ -504,7 +504,7 @@ def temporal_charts(df: pd.DataFrame):
             template=PLOTLY_TEMPLATE,
             margin=dict(t=50, b=0, l=0, r=0),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     elif aba == "Ticket médio":
         dfd = df[df["ordered_at"].notna()].copy()
@@ -521,7 +521,7 @@ def temporal_charts(df: pd.DataFrame):
         )
         st.plotly_chart(
             _line(by_p, "period", "ticket_medio", "Evolução do ticket médio (R$)"),
-            use_container_width=True,
+            width="stretch",
         )
 
 
@@ -547,12 +547,12 @@ def price_distribution(df: pd.DataFrame):
     c1.plotly_chart(
         _bar(pr_data, "price_range", "pedidos", "Pedidos por faixa",
              color="#3b82f6", text=pr_data["pedidos"]),
-        use_container_width=True,
+        width="stretch",
     )
     c2.plotly_chart(
         _bar(pr_data, "price_range", "total", "Gasto total por faixa (R$)",
              text=pr_data["total"].apply(lambda v: f"R${v:,.0f}")),
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -674,7 +674,7 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
     )
     fig.update_traces(marker_color="#10b981")
     fig.update_layout(yaxis_title="", margin=dict(t=40, b=0, l=0, r=0))
-    c1.plotly_chart(fig, use_container_width=True)
+    c1.plotly_chart(fig, width="stretch")
 
     comp = pd.DataFrame({
         "cenário": ["Pago no iFood", "Cozinhando em casa"],
@@ -688,7 +688,7 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
     )
     fig2.update_traces(textposition="outside")
     fig2.update_layout(showlegend=False, xaxis_title="", margin=dict(t=40, b=0, l=0, r=0))
-    c2.plotly_chart(fig2, use_container_width=True)
+    c2.plotly_chart(fig2, width="stretch")
 
     # Top pratos: o que mais te custou X e quanto seria o Y
     with st.expander("🔎 Ver economia prato a prato (top 30)"):
@@ -707,7 +707,7 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
             disp[col] = disp[col].apply(lambda v: f"R$ {v:,.2f}")
         disp.columns = ["Prato", "Tipo", "Qtd", "Pago (X)",
                         "Custo em casa", "Economia (Y)", "% economia"]
-        st.dataframe(disp, use_container_width=True, hide_index=True)
+        st.dataframe(disp, width="stretch", hide_index=True)
 
     st.caption(
         f"Com os percentuais atuais, fazer esses pratos em casa teria custado "
@@ -745,7 +745,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
             fig1.update_traces(textinfo="label+percent+value",
                                texttemplate="%{label}<br>%{percent}<br>R$%{value:,.0f}")
             fig1.update_layout(margin=dict(t=50, b=0, l=0, r=0), showlegend=False)
-            c1.plotly_chart(fig1, use_container_width=True)
+            c1.plotly_chart(fig1, width="stretch")
 
             fig2 = px.bar(
                 by_cat, x="category", y="pedidos",
@@ -754,11 +754,11 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
             )
             fig2.update_traces(marker_color="#3b82f6", textposition="outside")
             fig2.update_layout(showlegend=False, margin=dict(t=40, b=0, l=0, r=0))
-            c2.plotly_chart(fig2, use_container_width=True)
+            c2.plotly_chart(fig2, width="stretch")
 
             disp = by_cat.copy()
             disp.columns = ["Categoria", "Pedidos", "Total (R$)", "Ticket médio (R$)"]
-            st.dataframe(disp, use_container_width=True, hide_index=True)
+            st.dataframe(disp, width="stretch", hide_index=True)
 
     elif aba == "Top restaurantes":
         if df.empty:
@@ -780,7 +780,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
         )
         fig1.update_traces(marker_color=ACCENT)
         fig1.update_layout(yaxis_title="", margin=dict(t=40, b=0, l=0, r=0))
-        c1.plotly_chart(fig1, use_container_width=True)
+        c1.plotly_chart(fig1, width="stretch")
 
         fig2 = px.bar(
             by_rest.sort_values("total"), x="total", y="restaurant_name",
@@ -790,7 +790,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
         )
         fig2.update_traces(marker_color="#3b82f6")
         fig2.update_layout(yaxis_title="", margin=dict(t=40, b=0, l=0, r=0))
-        c2.plotly_chart(fig2, use_container_width=True)
+        c2.plotly_chart(fig2, width="stretch")
 
     elif aba == "Itens mais pedidos":
         if items_df.empty:
@@ -811,7 +811,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
         )
         fig.update_traces(marker_color=ACCENT)
         fig.update_layout(yaxis_title="", margin=dict(t=40, b=0, l=0, r=0))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     elif aba == "Distribuição de custos":
         if df.empty:
@@ -844,7 +844,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
             template=PLOTLY_TEMPLATE,
             margin=dict(t=50, b=0, l=0, r=0),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         st.caption(
             f"💰 Itens (bruto): R$ {total_subtotal:,.2f}  ·  "
             f"🏷️ Economia em cupons: −R$ {total_discount:,.2f}  →  "
@@ -949,7 +949,7 @@ def orders_table(df: pd.DataFrame):
     asc = st.checkbox("Crescente", value=False)
     display = display.sort_values(sort_col, ascending=asc)
 
-    st.dataframe(display, use_container_width=True, height=400)
+    st.dataframe(display, width="stretch", height=400)
 
     # Export
     col1, col2 = st.columns([1, 5])
@@ -990,7 +990,7 @@ def main():
     # Botão de coletar/atualizar pedidos deste perfil (roda o scraper)
     if st.sidebar.button(
         "⬇️ Coletar / atualizar pedidos",
-        use_container_width=True,
+        width="stretch",
         type="primary",
         help="Roda o scraper para este perfil. Abre o Chrome; resolva o "
              "captcha na janela se aparecer.",
@@ -1004,7 +1004,7 @@ def main():
             value=profile_display_name(sel_profile),
             key=f"rename_{sel_profile}",
         )
-        if st.button("Salvar nome", use_container_width=True):
+        if st.button("Salvar nome", width="stretch"):
             set_profile_display_name(sel_profile, new_name)
             st.success("Nome atualizado!")
             st.rerun()
