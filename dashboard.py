@@ -24,25 +24,51 @@ from database import (
 
 # ── Page config ───────────────────────────────────────────────────────────────
 
+ASSETS = Path(__file__).parent / "assets"
+LOGO = ASSETS / "ifood-logo.png"      # wordmark aparado
+ICONE = ASSETS / "ifood-icon.png"     # símbolo vazado em tile — legível a 16px
+
 st.set_page_config(
     page_title="iFood — Histórico de Pedidos",
-    page_icon="🛵",
+    page_icon=str(ICONE) if ICONE.exists() else "🛵",
     layout="wide",
-    initial_sidebar_state="expanded",
+    # "auto" e não "expanded": no desktop abre igual, mas no celular a sidebar
+    # expandida cobre a tela inteira e a primeira coisa que se vê são filtros,
+    # não os dados. Em "auto" o Streamlit a recolhe sozinho no estreito.
+    initial_sidebar_state="auto",
 )
 
 # ── CSS tweaks ────────────────────────────────────────────────────────────────
 
 st.markdown("""
 <style>
-    .metric-card {
-        background: #1e1e2e;
-        border-radius: 12px;
-        padding: 18px 22px;
-        margin-bottom: 4px;
-    }
-    .block-container { padding-top: 1.5rem; }
-    div[data-testid="stMetricValue"] > div { font-size: 1.6rem; font-weight: 700; }
+    /* Ritmo: respiro generoso ANTES do título de seção e apertado depois dele,
+       para o cabeçalho grudar no próprio conteúdo em vez de flutuar no meio. */
+    .block-container { padding-top: 2.25rem; }
+    .block-container h2 { margin-top: 2.5rem; margin-bottom: 0.75rem; }
+    .block-container h3 { margin-top: 1.75rem; margin-bottom: 0.5rem; }
+    .block-container h1 + div [data-testid="stCaptionContainer"] { margin-top: -0.35rem; }
+
+    /* O valor do KPI é o que se lê na varredura; o rótulo recua. */
+    div[data-testid="stMetricValue"] > div { font-size: 1.65rem; font-weight: 700;
+                                             letter-spacing: -0.02em; }
+    div[data-testid="stMetricLabel"] { opacity: 0.72; }
+
+    /* Superfícies que o navegador desenha por padrão e não pertencem a
+       design system nenhum — seleção, barra de rolagem e anel de foco. */
+    ::selection { background: rgba(234, 29, 44, 0.32); }
+    * { scrollbar-width: thin; scrollbar-color: #2b323e transparent; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: #2b323e; border-radius: 6px;
+                                border: 2px solid transparent; background-clip: content-box; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a4250; background-clip: content-box; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    :focus-visible { outline: 2px solid #ea1d2c; outline-offset: 2px; border-radius: 4px; }
+
+    /* Números da tabela alinhados na vertical pedem largura fixa de dígito;
+       o valor do KPI (grande e solto) não — ali fica proporcional. */
+    div[data-testid="stDataFrame"] { font-variant-numeric: tabular-nums; }
+
     /* iframe utilitário do localize.html — carrega e roda, mas não ocupa espaço */
     .st-key-localize_iframe { display: none; }
 </style>
@@ -81,7 +107,7 @@ PLOTLY_TEMPLATE = "plotly_dark"
 # Teto de 3 é deliberado: com o vermelho da marca fixo, um 4º matiz sempre
 # reprovava (amarelo↔vermelho ΔE 4.4, violeta↔azul 1.9). Mais que 3 categorias
 # vira barra, não fatia.
-DINHEIRO = "#ef4444"   # gasto, ticket, valor pago  (vermelho iFood)
+DINHEIRO = "#ea1d2c"   # gasto, ticket, valor pago  (vermelho iFood, do logo)
 PEDIDOS  = "#3987e5"   # contagem de pedidos/itens
 ECONOMIA = "#199e70"   # economia e custo cozinhando em casa
 ACCENT = DINHEIRO      # compat: usado como cor padrão das barras
@@ -206,7 +232,7 @@ def _filter_default(key: str, options: list, wanted=()) -> list:
 
 
 def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
-    st.sidebar.header("🔎 Filtros")
+    st.sidebar.header(":material/filter_alt: Filtros")
 
     if df.empty:
         return df
@@ -218,13 +244,14 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
 
     # Botão de limpar — on_click roda antes do rerender, resetando os widgets
     st.sidebar.button(
-        "🧹 Limpar todos os filtros",
+        "Limpar filtros",
+        icon=":material/backspace:",
         on_click=_clear_filters,
         width="stretch",
     )
 
     # ── Filtro temporal: Ano + Mês (multiselects, não conflitam) ──────────────
-    st.sidebar.subheader("📅 Período")
+    st.sidebar.subheader(":material/calendar_month: Período")
 
     hoje = pd.Timestamp.now()
 
@@ -345,12 +372,18 @@ def show_kpis(df: pd.DataFrame):
     total_delivery = df["delivery_fee"].sum()
     total_service  = df["service_fee"].sum()
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("💰 Total gasto",       f"R$ {total_spent:,.2f}")
-    c2.metric("🛵 Pedidos",           f"{n_orders}")
-    c3.metric("🎯 Ticket médio",      f"R$ {avg_ticket:,.2f}")
-    c4.metric("🏷️ Economizado (cupons)", f"R$ {total_savings:,.2f}")
-    c5.metric("📦 Taxas (entrega+serviço)", f"R$ {(total_delivery + total_service):,.2f}")
+    # Os cinco não têm o mesmo peso. Cinco tiles iguais numa linha era default
+    # de framework — e, no espaço que sobra, truncava justamente o número
+    # ("R$ 18,1…"). Três primários com valor cheio; cupons e taxas são leitura
+    # de apoio e descem para uma linha discreta.
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total gasto",  f"R$ {total_spent:,.2f}")
+    c2.metric("Pedidos",      f"{n_orders}")
+    c3.metric("Ticket médio", f"R$ {avg_ticket:,.2f}")
+    st.caption(
+        f"Economizado em cupons **R\\$ {total_savings:,.2f}**"
+        f"　·　Taxas de entrega e serviço **R\\$ {(total_delivery + total_service):,.2f}**"
+    )
 
 
 # ── Chart helpers ─────────────────────────────────────────────────────────────
@@ -404,11 +437,16 @@ def _barra_ou_numero(alvo, df, x, y, title, color=DINHEIRO, text=None, **kw):
     já está no KPI do topo. Nesse caso mostra o número direto.
     """
     if len(df) == 1:
-        # df[col].iloc[0], não df.iloc[0][col]: a segunda forma vira uma Series
-        # com dtype comum e o ano inteiro saía como "2026.0".
-        periodo, valor = df[x].iloc[0], df[y].iloc[0]
-        texto = f"R$ {valor:,.2f}" if "R$" in title else f"{valor:,.0f}"
-        alvo.metric(f"{title.replace(' (R$)', '')} · {periodo}", texto)
+        # Um período só: o valor já está no bloco de KPIs no topo da tela.
+        # Repetir aqui seria dizer o mesmo duas vezes — em vez disso o painel
+        # explica por que está vazio e aponta para onde há o que ver.
+        # (df[col].iloc[0] e não df.iloc[0][col]: a segunda forma vira Series
+        # com dtype comum e o ano inteiro saía "2026.0".)
+        alvo.caption(
+            f"Só **{df[x].iloc[0]}** no filtro atual — o total está nos "
+            "indicadores acima. Para comparar períodos, amplie o filtro; para "
+            "ver o padrão dentro do mês, use *Dia da semana* ou *Heatmap*."
+        )
         return
     alvo.plotly_chart(
         _bar(df, x, y, title, color=color, text=text, **kw), width="stretch"
@@ -442,7 +480,7 @@ def _abas(opcoes: list, key: str) -> str:
 
 
 def temporal_charts(df: pd.DataFrame):
-    st.subheader("📅 Análise temporal")
+    st.subheader(":material/timeline: Análise temporal")
 
     aba = _abas(
         ["Por ano", "Por mês", "Dia da semana", "Heatmap", "Ticket médio"],
@@ -596,7 +634,7 @@ def temporal_charts(df: pd.DataFrame):
 # ── Price distribution ────────────────────────────────────────────────────────
 
 def price_distribution(df: pd.DataFrame):
-    st.subheader("💵 Distribuição por faixa de valor")
+    st.subheader(":material/bar_chart: Distribuição por faixa de valor")
     if df.empty:
         return
 
@@ -688,7 +726,7 @@ def _items_savings(items_df: pd.DataFrame, scale: float) -> pd.DataFrame:
 
 
 def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
-    st.subheader("🍳 E se você tivesse cozinhado em casa?")
+    st.subheader(":material/skillet: E se você tivesse cozinhado em casa?")
     if df.empty:
         st.info("Sem dados.")
         return
@@ -699,7 +737,7 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
     st.caption(
         "Economia estimada **prato a prato**: cada item é classificado por tipo "
         "(pizza, lanche, comida caseira…) e recebe um % de economia típico de fazer "
-        "em casa. Ex.: estrogonofe pago a R$50 sai ~R$20 em casa → você economiza R$30. "
+        "em casa. Ex.: estrogonofe pago a R\\$50 sai ~R\\$20 em casa → você economiza R\\$30. "
         "**Taxas de entrega + serviço** são 100% evitáveis e entram por cima."
     )
 
@@ -718,12 +756,12 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
     home_total = total_pago - total_saved
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("💸 Economia total",      f"R$ {total_saved:,.2f}",
+    c1.metric("Economia total",      f"R$ {total_saved:,.2f}",
               f"−{(total_saved/total_pago*100) if total_pago else 0:.0f}% do que pagou",
               delta_color="inverse")
-    c2.metric("🍳 Custo cozinhando",    f"R$ {home_total:,.2f}")
-    c3.metric("🥡 Economia nos pratos", f"R$ {food_saved:,.2f}")
-    c4.metric("📦 Taxas evitadas",      f"R$ {fees:,.2f}")
+    c2.metric("Custo cozinhando",    f"R$ {home_total:,.2f}")
+    c3.metric("Economia nos pratos", f"R$ {food_saved:,.2f}")
+    c4.metric("Taxas evitadas",      f"R$ {fees:,.2f}")
 
     # Economia agregada por tipo de prato
     by_cat = (
@@ -777,8 +815,8 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
 
     st.caption(
         f"Com os percentuais atuais, fazer esses pratos em casa teria custado "
-        f"~R$ {home_food:,.2f} em ingredientes vs. R$ {sav['paid'].sum():,.2f} pagos "
-        f"no delivery — economia de **R$ {food_saved:,.2f}** só nos pratos, mais "
+        f"~R\\$ {home_food:,.2f} em ingredientes vs. R\\$ {sav['paid'].sum():,.2f} pagos "
+        f"no delivery — economia de **R\\$ {food_saved:,.2f}** só nos pratos, mais "
         f"R$ {fees:,.2f} de taxas evitadas."
     )
 
@@ -786,7 +824,7 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
 # ── Restaurants & items ───────────────────────────────────────────────────────
 
 def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
-    st.subheader("🍔 Restaurantes e itens")
+    st.subheader(":material/storefront: Restaurantes e itens")
     aba = _abas(
         ["Por categoria", "Top restaurantes", "Itens mais pedidos", "Distribuição de custos"],
         key="aba_restaurantes",
@@ -913,9 +951,9 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
         )
         st.plotly_chart(_cromo(fig), width="stretch")
         st.caption(
-            f"💰 Itens (bruto): R$ {total_subtotal:,.2f}  ·  "
-            f"🏷️ Economia em cupons: −R$ {total_discount:,.2f}  →  "
-            f"Itens líquidos: R$ {items_net:,.2f}. "
+            f"Itens (bruto): R\\$ {total_subtotal:,.2f}  ·  "
+            f"Economia em cupons: −R\\$ {total_discount:,.2f}  →  "
+            f"Itens líquidos: R\\$ {items_net:,.2f}. "
             "O cupom **não** é custo — abate o valor dos itens."
         )
 
@@ -936,7 +974,7 @@ def run_scraper(profile: str):
         "--auto",
     ]
 
-    with st.status(f"🛵 Coletando pedidos de **{profile}**…", expanded=True) as status:
+    with st.status(f"Coletando pedidos de **{profile}**…", expanded=True) as status:
         st.caption(
             "Uma janela do Chrome vai abrir. Se aparecer captcha "
             "('Não sou um robô'), resolva nela — a coleta continua sozinha."
@@ -955,9 +993,9 @@ def run_scraper(profile: str):
 
         ok = proc.returncode == 0 and "FIM_SCRAPER_OK" in _read_log(log_path)
         if ok:
-            status.update(label="✅ Coleta concluída!", state="complete")
+            status.update(label="Coleta concluída", state="complete")
         else:
-            status.update(label="⚠️ Coleta encerrou com avisos — confira o log abaixo.",
+            status.update(label="Coleta encerrou com avisos — confira o log abaixo.",
                           state="error")
 
     load_data.clear()
@@ -983,7 +1021,7 @@ def _render_log_tail(box, path: Path, n: int = 14):
 # ── Orders table ──────────────────────────────────────────────────────────────
 
 def orders_table(df: pd.DataFrame):
-    st.subheader("📋 Tabela de pedidos")
+    st.subheader(":material/table_rows: Tabela de pedidos")
     if df.empty:
         st.info("Nenhum pedido encontrado com os filtros atuais.")
         return
@@ -1005,7 +1043,7 @@ def orders_table(df: pd.DataFrame):
     ]
     display.columns = names
 
-    search = st.text_input("🔍 Buscar restaurante / status", "")
+    search = st.text_input("Buscar restaurante ou status", "")
     if search:
         mask = display.apply(
             lambda col: col.astype(str).str.contains(search, case=False), axis=1
@@ -1021,22 +1059,29 @@ def orders_table(df: pd.DataFrame):
     # Export
     col1, col2 = st.columns([1, 5])
     csv = display.to_csv(index=False).encode("utf-8-sig")
-    col1.download_button("⬇️ CSV", csv, "ifood_pedidos.csv", "text/csv")
+    col1.download_button("CSV", csv, "ifood_pedidos.csv", "text/csv",
+                         icon=":material/download:")
 
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
         display.to_excel(writer, index=False, sheet_name="Pedidos")
     col2.download_button(
-        "⬇️ Excel", buf.getvalue(),
+        "Excel", buf.getvalue(),
         "ifood_pedidos.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        icon=":material/download:",
     )
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    st.title("🛵 iFood — Histórico de Pedidos")
+    # A marca vive no slot de logo do Streamlit (canto superior esquerdo, fica
+    # acima da sidebar). Com o wordmark ali, repetir "iFood" no h1 seria dizer
+    # a mesma coisa duas vezes — o título passa a nomear só a tela.
+    if LOGO.exists():
+        st.logo(str(LOGO), icon_image=str(ICONE), size="large")
+    st.title("Histórico de pedidos")
     _localize_widgets()  # traduz textos internos dos widgets (ex.: 'Select all')
 
     # Seletor de perfil (pessoa) — bancos isolados, sem misturar pedidos
@@ -1048,7 +1093,7 @@ def main():
     initial = os.environ.get("IFOOD_PROFILE", "")
     index = profiles.index(initial) if initial in profiles else 0
     sel_profile = st.sidebar.selectbox(
-        "👤 Perfil", profiles,
+        "Perfil", profiles,
         index=index,
         format_func=profile_display_name,
         help="Cada perfil é uma pessoa, com banco de dados separado.",
@@ -1056,7 +1101,8 @@ def main():
 
     # Botão de coletar/atualizar pedidos deste perfil (roda o scraper)
     if st.sidebar.button(
-        "⬇️ Coletar / atualizar pedidos",
+        "Coletar / atualizar pedidos",
+        icon=":material/download:",
         width="stretch",
         type="primary",
         help="Roda o scraper para este perfil. Abre o Chrome; resolva o "
@@ -1064,8 +1110,16 @@ def main():
     ):
         run_scraper(sel_profile)  # bloqueia, mostra status e dá rerun ao fim
 
+    # Mesma família da ação acima: atualizar os dados. Coletar busca no iFood;
+    # Recarregar só relê o banco (barato, sem abrir o Chrome).
+    if st.sidebar.button(
+        "Recarregar", icon=":material/refresh:", width="stretch",
+        help="Relê o banco local, sem ir ao iFood.",
+    ):
+        reload()
+
     # Editor de nome de exibição (não renomeia arquivos/sessões)
-    with st.sidebar.expander("✏️ Renomear este perfil"):
+    with st.sidebar.expander("Renomear este perfil"):
         new_name = st.text_input(
             "Nome de exibição",
             value=profile_display_name(sel_profile),
@@ -1084,17 +1138,18 @@ def main():
     if orders_df.empty:
         st.warning(
             f"Nenhum pedido no perfil **{sel_profile}**. "
-            "Clique em **⬇️ Coletar / atualizar pedidos** na barra lateral "
+            "Clique em **Coletar / atualizar pedidos** na barra lateral "
             f"ou rode `python scraper.py -p {sel_profile}`."
         )
-        if st.button("🔄 Recarregar"):
+        if st.button("Recarregar", icon=":material/refresh:"):
             reload()
         return
 
-    col_r, col_info = st.columns([1, 6])
-    if col_r.button("🔄 Recarregar"):
-        reload()
-    col_info.caption(
+    # A procedência do dado é legenda do título, não uma linha com botão ao
+    # lado: espremido numa coluna estreita o rótulo quebrava em "Recar/regar".
+    # "Recarregar" subiu para a sidebar, junto de "Coletar" — são a mesma
+    # família de ação (atualizar os dados), e lá têm largura inteira.
+    st.caption(
         f"Base de dados: **{len(orders_df)}** pedidos · "
         f"Última coleta: {_fmt_coleta(orders_df['scraped_at'].max()) if 'scraped_at' in orders_df else '–'}"
     )

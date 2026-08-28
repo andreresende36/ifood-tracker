@@ -2,3 +2,36 @@
 # Serve a pasta static/ em /app/static/. Necessário para o localize.html,
 # que st.iframe carrega para traduzir os textos internos dos widgets.
 enableStaticServing = true
+
+[theme]
+base = "dark"
+
+# Vermelho da marca, amostrado do próprio logo (assets/ifood-logo.png).
+primaryColor = "#ea1d2c"
+
+# NÃO mudar sem revalidar a paleta dos gráficos: foi contra esta superfície
+# que as três matizes passaram nos testes de CVD e contraste.
+backgroundColor = "#0e1117"
+
+secondaryBackgroundColor = "#161b24"
+textColor = "#e6e8ec"
+borderColor = "#242a35"
+linkColor = "#5b9df0"
+
+baseRadius = "0.5rem"
+buttonRadius = "0.5rem"
+showWidgetBorder = true
+showSidebarBorder = true
+
+# Mesma paleta validada dos gráficos, para qualquer série que não receba
+# cor explícita no código.
+chartCategoricalColors = ["#ea1d2c", "#3987e5", "#199e70"]
+
+# O valor do KPI é o que se lê primeiro na varredura — ganha peso.
+metricValueFontWeight = 700
+
+[theme.sidebar]
+# Um passo mais escura que o conteúdo: separa por superfície, sem precisar
+# de borda grossa nem caixa em volta de cada filtro.
+backgroundColor = "#0b0e14"
+borderColor = "#1e242e"
