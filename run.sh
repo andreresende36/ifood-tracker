@@ -7,6 +7,11 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# Sempre ${VAR} nas mensagens: em locale UTF-8 o bash 3.2 (o do macOS) engole o
+# primeiro byte de um caractere acentuado colado no $VAR para dentro do nome da
+# variável — "$PERFIL_NOME…" virava a variável 'PERFIL_NOME\xe2', que com
+# `set -u` mata o script.
+
 # ── venv ──────────────────────────────────────────────────────────────────────
 if [[ ! -x .venv/bin/python ]]; then
     echo "▶ Criando .venv…"
@@ -62,9 +67,9 @@ COLETAR=1
 # ── coleta ────────────────────────────────────────────────────────────────────
 if (( COLETAR )); then
     echo
-    echo "▶ Coletando pedidos de $PERFIL_NOME…"
+    echo "▶ Coletando pedidos de ${PERFIL_NOME}…"
     echo "  (Chrome vai abrir. Se aparecer captcha, resolva na janela.)"
-    if python scraper.py --profile-name "$PERFIL" --auto 2>&1 | tee "data/scrape_${PERFIL}.log"; then
+    if python scraper.py --profile-name "${PERFIL}" --auto 2>&1 | tee "data/scrape_${PERFIL}.log"; then
         echo "✅ Coleta concluída."
     else
         echo "⚠️  Coleta falhou — abrindo o dashboard com os dados que já existem."
@@ -73,6 +78,6 @@ fi
 
 # ── dashboard ─────────────────────────────────────────────────────────────────
 echo
-echo "▶ Abrindo o dashboard ($PERFIL_NOME)…"
-export IFOOD_PROFILE="$PERFIL"
+echo "▶ Abrindo o dashboard (${PERFIL_NOME})…"
+export IFOOD_PROFILE="${PERFIL}"
 exec streamlit run dashboard.py
