@@ -9,6 +9,7 @@ import os
 import subprocess
 import sys
 import time
+from datetime import timedelta, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -100,6 +101,24 @@ def _translate_status(s):
     if s is None or (isinstance(s, float) and pd.isna(s)):
         return s
     return STATUS_PT.get(str(s).upper(), str(s).capitalize())
+
+
+# Offset fixo em vez de "America/Sao_Paulo": o Brasil não tem mais horário de
+# verão, então -3 é constante — e assim não dependemos do tzdata instalado.
+BRASILIA = timezone(timedelta(hours=-3))
+
+
+def _fmt_coleta(valor) -> str:
+    """
+    Formata o scraped_at para dd-mm-aaaa HH:MM:SS em horário de Brasília.
+
+    O SQLite grava com datetime('now'), que é UTC — sem converter, a tela
+    mostrava 3 horas à frente do horário real da coleta.
+    """
+    ts = pd.to_datetime(valor, errors="coerce", utc=True)
+    if pd.isna(ts):
+        return "–"
+    return ts.tz_convert(BRASILIA).strftime("%d-%m-%Y %H:%M:%S")
 
 
 # ── Data loading ──────────────────────────────────────────────────────────────
@@ -1010,7 +1029,7 @@ def main():
         reload()
     col_info.caption(
         f"Base de dados: **{len(orders_df)}** pedidos · "
-        f"Última coleta: {orders_df['scraped_at'].max() if 'scraped_at' in orders_df else '–'}"
+        f"Última coleta: {_fmt_coleta(orders_df['scraped_at'].max()) if 'scraped_at' in orders_df else '–'}"
     )
 
     filtered = sidebar_filters(orders_df)
