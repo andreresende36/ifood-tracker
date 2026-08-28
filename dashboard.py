@@ -334,14 +334,32 @@ def _line(df, x, y, title):
 
 # ── Temporal analysis ─────────────────────────────────────────────────────────
 
+def _abas(opcoes: list, key: str) -> str:
+    """
+    Seletor de painel que monta SÓ o escolhido.
+
+    Com st.tabs o Streamlit monta todos os painéis de uma vez; os inativos
+    ficam com container de largura 0 e o Plotly calcula área de plotagem
+    negativa (o console enchia de '<rect> attribute width: A negative value
+    is not valid'). Renderizando um painel por vez a causa some — e ainda
+    sobra menos trabalho por rerun.
+    """
+    escolha = st.segmented_control(
+        "Visualização", opcoes,
+        default=opcoes[0], key=key, label_visibility="collapsed",
+    )
+    return escolha or opcoes[0]  # segmented_control permite desmarcar → None
+
+
 def temporal_charts(df: pd.DataFrame):
     st.subheader("📅 Análise temporal")
 
-    tab_year, tab_month, tab_dow, tab_heatmap, tab_ticket = st.tabs(
-        ["Por ano", "Por mês", "Dia da semana", "Heatmap", "Ticket médio"]
+    aba = _abas(
+        ["Por ano", "Por mês", "Dia da semana", "Heatmap", "Ticket médio"],
+        key="aba_temporal",
     )
 
-    with tab_year:
+    if aba == "Por ano":
         if df["year"].isna().all():
             st.info("Sem dados de data.")
             return
@@ -364,7 +382,7 @@ def temporal_charts(df: pd.DataFrame):
             use_container_width=True,
         )
 
-    with tab_month:
+    elif aba == "Por mês":
         mode = st.radio("Visualização", ["Série histórica (mês/ano)", "Sazonal (Jan–Dez)"],
                         horizontal=True, key="month_mode")
         has_date = df["year"].notna() & df["month"].notna()
@@ -411,7 +429,7 @@ def temporal_charts(df: pd.DataFrame):
                 use_container_width=True,
             )
 
-    with tab_dow:
+    elif aba == "Dia da semana":
         dfd = df[df["day_of_week"].notna()].copy()
         if dfd.empty:
             st.info("Sem dados de dia da semana.")
@@ -438,7 +456,7 @@ def temporal_charts(df: pd.DataFrame):
             use_container_width=True,
         )
 
-    with tab_heatmap:
+    elif aba == "Heatmap":
         dfd = df[df["day_of_week"].notna() & df["hour"].notna()].copy()
         if dfd.empty:
             st.info("Sem dados de hora.")
@@ -469,7 +487,7 @@ def temporal_charts(df: pd.DataFrame):
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    with tab_ticket:
+    elif aba == "Ticket médio":
         dfd = df[df["ordered_at"].notna()].copy()
         if dfd.empty:
             st.info("Sem dados de data.")
@@ -684,11 +702,12 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
 
 def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
     st.subheader("🍔 Restaurantes e itens")
-    tab_cat, tab_rest, tab_items, tab_breakdown = st.tabs(
-        ["Por categoria", "Top restaurantes", "Itens mais pedidos", "Distribuição de custos"]
+    aba = _abas(
+        ["Por categoria", "Top restaurantes", "Itens mais pedidos", "Distribuição de custos"],
+        key="aba_restaurantes",
     )
 
-    with tab_cat:
+    if aba == "Por categoria":
         if df.empty or "category" not in df.columns:
             st.info("Sem dados de categoria.")
         else:
@@ -722,7 +741,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
             disp.columns = ["Categoria", "Pedidos", "Total (R$)", "Ticket médio (R$)"]
             st.dataframe(disp, use_container_width=True, hide_index=True)
 
-    with tab_rest:
+    elif aba == "Top restaurantes":
         if df.empty:
             return
         top_n = st.slider("Mostrar top N", 5, 30, 15, key="top_rest")
@@ -754,7 +773,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
         fig2.update_layout(yaxis_title="", margin=dict(t=40, b=0, l=0, r=0))
         c2.plotly_chart(fig2, use_container_width=True)
 
-    with tab_items:
+    elif aba == "Itens mais pedidos":
         if items_df.empty:
             st.info("Sem dados de itens.")
             return
@@ -775,7 +794,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
         fig.update_layout(yaxis_title="", margin=dict(t=40, b=0, l=0, r=0))
         st.plotly_chart(fig, use_container_width=True)
 
-    with tab_breakdown:
+    elif aba == "Distribuição de custos":
         if df.empty:
             return
         total_subtotal = df["subtotal"].sum()
