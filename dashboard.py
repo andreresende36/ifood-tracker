@@ -143,6 +143,29 @@ def _clear_filters():
     st.session_state["flt_nonce"] = n + 1
 
 
+def _filter_default(key: str, options: list, wanted=()) -> list:
+    """
+    Estado inicial de um multiselect de filtro.
+
+    Faz duas coisas:
+    1. Descarta seleções que não existem mais nas opções — acontece ao trocar
+       de perfil (ex.: 'Ago' selecionado no André, mas a Carol não tem pedidos
+       em agosto). Sem isso o Streamlit quebra com valor fora da lista.
+    2. Só na PRIMEIRA renderização da sessão, pré-seleciona `wanted`. Depois
+       disso devolve vazio, senão o botão 'Limpar todos os filtros' remontaria
+       os widgets já preenchidos de novo e nunca limparia nada.
+    """
+    atual = st.session_state.get(key)
+    if isinstance(atual, list):
+        mantidos = [v for v in atual if v in options]
+        if len(mantidos) != len(atual):
+            st.session_state[key] = mantidos
+
+    if st.session_state.get("flt_seeded"):
+        return []
+    return [w for w in wanted if w in options]
+
+
 def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     st.sidebar.header("🔎 Filtros")
 
@@ -164,9 +187,12 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     # ── Filtro temporal: Ano + Mês (multiselects, não conflitam) ──────────────
     st.sidebar.subheader("📅 Período")
 
+    hoje = pd.Timestamp.now()
+
     years = sorted(df["year"].dropna().unique().astype(int).tolist())
     sel_years = st.sidebar.multiselect(
-        "Ano", years, placeholder="Todos", key=k("flt_years")
+        "Ano", years, placeholder="Todos", key=k("flt_years"),
+        default=_filter_default(k("flt_years"), years, [hoje.year]),
     )
     if sel_years:
         df = df[df["year"].isin(sel_years)]
@@ -175,7 +201,10 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     month_pairs = sorted(df["month"].dropna().unique().astype(int).tolist())
     month_labels = [MONTH_NAMES[m] for m in month_pairs]
     sel_month_labels = st.sidebar.multiselect(
-        "Mês", month_labels, placeholder="Todos", key=k("flt_months")
+        "Mês", month_labels, placeholder="Todos", key=k("flt_months"),
+        default=_filter_default(
+            k("flt_months"), month_labels, [MONTH_NAMES[hoje.month]]
+        ),
     )
     if sel_month_labels:
         sel_months = [MONTH_NAMES.index(lbl) for lbl in sel_month_labels]
@@ -209,7 +238,8 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     if "category" in df.columns:
         cats = sorted(df["category"].dropna().unique().tolist())
         sel_cats = st.sidebar.multiselect(
-            "Categoria", cats, placeholder="Todas", key=k("flt_cats")
+            "Categoria", cats, placeholder="Todas", key=k("flt_cats"),
+            default=_filter_default(k("flt_cats"), cats, ["Restaurante"]),
         )
         if sel_cats:
             df = df[df["category"].isin(sel_cats)]
@@ -217,7 +247,9 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     # Status
     statuses = sorted(df["status"].dropna().unique().tolist())
     sel_status = st.sidebar.multiselect(
-        "Status", statuses, placeholder="Todos", key=k("flt_status")
+        "Status", statuses, placeholder="Todos", key=k("flt_status"),
+        # "Entregue", não "ENTREGUE": load_data() já passou pelo STATUS_PT
+        default=_filter_default(k("flt_status"), statuses, ["Entregue"]),
     )
     if sel_status:
         df = df[df["status"].isin(sel_status)]
@@ -225,7 +257,8 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     # Day of week
     dow_options = DAY_NAMES
     sel_dow = st.sidebar.multiselect(
-        "Dia da semana", dow_options, placeholder="Todos", key=k("flt_dow")
+        "Dia da semana", dow_options, placeholder="Todos", key=k("flt_dow"),
+        default=_filter_default(k("flt_dow"), dow_options),
     )
     if sel_dow:
         sel_dow_idx = [DAY_NAMES.index(d) for d in sel_dow]
@@ -234,7 +267,8 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     # Price range
     pr_options = [p for p in PRICE_RANGE_ORDER if p in df["price_range"].values]
     sel_pr = st.sidebar.multiselect(
-        "Faixa de valor", pr_options, placeholder="Todas", key=k("flt_pr")
+        "Faixa de valor", pr_options, placeholder="Todas", key=k("flt_pr"),
+        default=_filter_default(k("flt_pr"), pr_options),
     )
     if sel_pr:
         df = df[df["price_range"].isin(sel_pr)]
@@ -245,6 +279,7 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
         "Restaurante", restaurants,
         placeholder="Todos",
         key=k("flt_rest"),
+        default=_filter_default(k("flt_rest"), restaurants),
     )
     if sel_rest:
         df = df[df["restaurant_name"].isin(sel_rest)]
@@ -254,6 +289,9 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
         f"{len(df)} pedidos selecionados  ·  "
         "deixe vazio = mostra todos; selecione = filtra só os escolhidos"
     )
+
+    # Widgets já montados uma vez: daqui pra frente nenhum default é reaplicado
+    st.session_state["flt_seeded"] = True
 
     return df
 
