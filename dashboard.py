@@ -71,7 +71,38 @@ PRICE_RANGE_ORDER = [
     "Até R$30", "R$30–50", "R$50–80", "R$80–120", "Acima de R$120", "Desconhecido"
 ]
 PLOTLY_TEMPLATE = "plotly_dark"
-ACCENT = "#ef4444"   # iFood red-ish
+
+# ── Paleta dos gráficos ───────────────────────────────────────────────────────
+# Três matizes, cada uma com UM papel fixo no dashboard inteiro — cor segue a
+# grandeza, não a posição do gráfico. Validadas juntas contra a superfície real
+# do Streamlit dark (#0e1117), em todos os pares:
+#   faixa de luminosidade OK · croma OK · pior par CVD ΔE 8.3 (deutan) ·
+#   visão normal ΔE 20.9 · contraste >= 3:1
+# Teto de 3 é deliberado: com o vermelho da marca fixo, um 4º matiz sempre
+# reprovava (amarelo↔vermelho ΔE 4.4, violeta↔azul 1.9). Mais que 3 categorias
+# vira barra, não fatia.
+DINHEIRO = "#ef4444"   # gasto, ticket, valor pago  (vermelho iFood)
+PEDIDOS  = "#3987e5"   # contagem de pedidos/itens
+ECONOMIA = "#199e70"   # economia e custo cozinhando em casa
+ACCENT = DINHEIRO      # compat: usado como cor padrão das barras
+
+# Cromo recessivo: grade e eixos a um passo da superfície, nunca competindo
+# com os dados.
+SURFACE  = "#0e1117"   # fundo real do Streamlit dark
+GRID     = "#22252e"
+AXIS     = "#3a3f4b"
+INK_MUTE = "#8b8f9a"
+
+# Sequencial de uma matiz só para o heatmap. Em fundo escuro o passo do zero
+# tem que RECUAR para a superfície — a escala "Reds" do Plotly fazia o oposto,
+# deixando as células vazias claras e o gráfico virava um bloco branco.
+HEAT_SCALE = [
+    [0.00, "#141b28"], [0.25, "#1c4a86"],
+    [0.55, "#256abf"], [0.80, "#3987e5"], [1.00, "#86b6ef"],
+]
+
+# Acima de ~8 barras um número em cada uma vira ruído e começa a colidir.
+MAX_ROTULOS = 8
 
 # Tradução defensiva de status (caso o iFood retorne um valor não mapeado pelo scraper)
 STATUS_PT = {
@@ -324,20 +355,71 @@ def show_kpis(df: pd.DataFrame):
 
 # ── Chart helpers ─────────────────────────────────────────────────────────────
 
-def _bar(df, x, y, title, color=ACCENT, text=None, xtype=None):
-    fig = px.bar(df, x=x, y=y, title=title, template=PLOTLY_TEMPLATE, text=text)
-    fig.update_traces(marker_color=color, textposition="outside")
+def _cromo(fig):
+    """Grade/eixos em fio recessivo e fundo transparente sobre o tema."""
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color=INK_MUTE),
+        title_font=dict(color="#e6e8ec", size=15),
+        margin=dict(t=44, b=0, l=0, r=0),
+    )
+    # title="": o eixo herdava o nome cru da coluna ("total", "category",
+    # "pedidos"). O título do gráfico já diz a grandeza — o eixo repetindo
+    # em jargão de banco só polui.
+    eixo = dict(gridcolor=GRID, gridwidth=1, linecolor=AXIS,
+                zerolinecolor=AXIS, ticks="", title="")
+    fig.update_xaxes(**eixo)
+    fig.update_yaxes(**eixo)
+    return fig
+
+
+def _bar(df, x, y, title, color=DINHEIRO, text=None, xtype=None, orient=None):
+    # Rótulo só quando cabe: acima de MAX_ROTULOS barras o número em cada uma
+    # colide e é ilegível (era o caso dos "Top 15/30", que saíam recortados).
+    n = len(df)
+    if text is not None and n > MAX_ROTULOS:
+        text = None
+    fig = px.bar(df, x=x, y=y, title=title, template=PLOTLY_TEMPLATE,
+                 text=text, orientation=orient)
+    fig.update_traces(
+        marker_color=color,
+        textposition="outside",
+        textfont=dict(color=INK_MUTE),
+        # 2px de respiro entre barras vizinhas em vez de borda desenhada
+        marker_line_color=SURFACE, marker_line_width=2,
+    )
     if xtype:
         fig.update_xaxes(type=xtype)
-    fig.update_layout(showlegend=False, margin=dict(t=40, b=0, l=0, r=0))
-    return fig
+    fig.update_layout(showlegend=False)
+    return _cromo(fig)
+
+
+def _barra_ou_numero(alvo, df, x, y, title, color=DINHEIRO, text=None, **kw):
+    """
+    Uma barra só não é gráfico — é um número.
+
+    Com o filtro padrão (ano + mês corrente) os painéis "Por ano" e "Por mês"
+    reduziam a uma barra gigante ocupando meia tela para repetir um valor que
+    já está no KPI do topo. Nesse caso mostra o número direto.
+    """
+    if len(df) == 1:
+        # df[col].iloc[0], não df.iloc[0][col]: a segunda forma vira uma Series
+        # com dtype comum e o ano inteiro saía como "2026.0".
+        periodo, valor = df[x].iloc[0], df[y].iloc[0]
+        texto = f"R$ {valor:,.2f}" if "R$" in title else f"{valor:,.0f}"
+        alvo.metric(f"{title.replace(' (R$)', '')} · {periodo}", texto)
+        return
+    alvo.plotly_chart(
+        _bar(df, x, y, title, color=color, text=text, **kw), width="stretch"
+    )
 
 
 def _line(df, x, y, title):
     fig = px.line(df, x=x, y=y, title=title, template=PLOTLY_TEMPLATE, markers=True)
-    fig.update_traces(line_color=ACCENT)
-    fig.update_layout(margin=dict(t=40, b=0, l=0, r=0))
-    return fig
+    fig.update_traces(line_color=DINHEIRO, line_width=2,
+                      marker=dict(size=8, line=dict(color=SURFACE, width=2)))
+    return _cromo(fig)
 
 
 # ── Temporal analysis ─────────────────────────────────────────────────────────
@@ -379,16 +461,11 @@ def temporal_charts(df: pd.DataFrame):
         )
         by_year["year"] = by_year["year"].astype(int)
         c1, c2 = st.columns(2)
-        c1.plotly_chart(
-            _bar(by_year, "year", "total", "Gasto por ano (R$)",
-                 text=by_year["total"].apply(lambda v: f"R${v:,.0f}"), xtype="category"),
-            width="stretch",
-        )
-        c2.plotly_chart(
-            _bar(by_year, "year", "pedidos", "Pedidos por ano",
-                 color="#3b82f6", text=by_year["pedidos"], xtype="category"),
-            width="stretch",
-        )
+        _barra_ou_numero(c1, by_year, "year", "total", "Gasto por ano (R$)",
+                         text=by_year["total"].apply(lambda v: f"R${v:,.0f}"),
+                         xtype="category")
+        _barra_ou_numero(c2, by_year, "year", "pedidos", "Pedidos por ano",
+                         color=PEDIDOS, text=by_year["pedidos"], xtype="category")
 
     elif aba == "Por mês":
         mode = st.radio("Visualização", ["Série histórica (mês/ano)", "Sazonal (Jan–Dez)"],
@@ -408,14 +485,9 @@ def temporal_charts(df: pd.DataFrame):
                 .sort_values("period")
             )
             c1, c2 = st.columns(2)
-            c1.plotly_chart(
-                _bar(by_period, "period", "total", "Gasto por mês (R$)"),
-                width="stretch",
-            )
-            c2.plotly_chart(
-                _bar(by_period, "period", "pedidos", "Pedidos por mês", color="#3b82f6"),
-                width="stretch",
-            )
+            _barra_ou_numero(c1, by_period, "period", "total", "Gasto por mês (R$)")
+            _barra_ou_numero(c2, by_period, "period", "pedidos", "Pedidos por mês",
+                             color=PEDIDOS)
         else:
             by_month = (
                 dfd.groupby("month")
@@ -433,7 +505,7 @@ def temporal_charts(df: pd.DataFrame):
             )
             c2.plotly_chart(
                 _bar(by_month, "month_name", "pedidos", "Total de pedidos por mês do ano",
-                     color="#3b82f6"),
+                     color=PEDIDOS),
                 width="stretch",
             )
 
@@ -456,11 +528,11 @@ def temporal_charts(df: pd.DataFrame):
             width="stretch",
         )
         c2.plotly_chart(
-            _bar(by_dow, "day_name", "pedidos", "Pedidos por dia", color="#3b82f6"),
+            _bar(by_dow, "day_name", "pedidos", "Pedidos por dia", color=PEDIDOS),
             width="stretch",
         )
         c3.plotly_chart(
-            _bar(by_dow, "day_name", "ticket", "Ticket médio por dia (R$)", color="#10b981"),
+            _bar(by_dow, "day_name", "ticket", "Ticket médio por dia (R$)", color=DINHEIRO),
             width="stretch",
         )
 
@@ -477,23 +549,30 @@ def temporal_charts(df: pd.DataFrame):
             .reindex(index=range(7), columns=range(24))
             .fillna(0)
         )
+        z = pivot.values
         fig = go.Figure(
             go.Heatmap(
-                z=pivot.values,
+                z=z,
                 x=[f"{h:02d}h" for h in range(24)],
                 y=DAY_NAMES,
-                colorscale="Reds",
+                # Uma matiz só, e o zero RECUANDO para o fundo. Com "Reds" as
+                # células vazias ficavam quase brancas: a maior parte da grade
+                # é zero, então o gráfico virava um bloco claro gritando numa
+                # tela escura — o oposto do que a escala deve fazer.
+                colorscale=HEAT_SCALE,
                 hoverongaps=False,
-                text=pivot.values.astype(int),
+                # Número só nas células com pedido; zero não precisa de rótulo.
+                text=[[str(int(v)) if v else "" for v in linha] for linha in z],
                 texttemplate="%{text}",
+                textfont=dict(size=10),
+                xgap=2, ygap=2,          # respiro de 2px em vez de borda
+                colorbar=dict(title="", thickness=10, outlinewidth=0,
+                              tickfont=dict(color=INK_MUTE)),
             )
         )
-        fig.update_layout(
-            title="Pedidos por dia da semana × hora",
-            template=PLOTLY_TEMPLATE,
-            margin=dict(t=50, b=0, l=0, r=0),
-        )
-        st.plotly_chart(fig, width="stretch")
+        fig.update_layout(title="Pedidos por dia da semana × hora",
+                          template=PLOTLY_TEMPLATE)
+        st.plotly_chart(_cromo(fig), width="stretch")
 
     elif aba == "Ticket médio":
         dfd = df[df["ordered_at"].notna()].copy()
@@ -535,7 +614,7 @@ def price_distribution(df: pd.DataFrame):
     c1, c2 = st.columns(2)
     c1.plotly_chart(
         _bar(pr_data, "price_range", "pedidos", "Pedidos por faixa",
-             color="#3b82f6", text=pr_data["pedidos"]),
+             color=PEDIDOS, text=pr_data["pedidos"]),
         width="stretch",
     )
     c2.plotly_chart(
@@ -655,15 +734,12 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
         .sort_values("economia", ascending=False)
     )
     c1, c2 = st.columns(2)
-    fig = px.bar(
-        by_cat.sort_values("economia"), x="economia", y="dish_cat",
-        orientation="h", title="Economia estimada por tipo de prato (R$)",
-        template=PLOTLY_TEMPLATE,
-        text=by_cat.sort_values("economia")["economia"].apply(lambda v: f"R${v:,.0f}"),
-    )
-    fig.update_traces(marker_color="#10b981")
-    fig.update_layout(yaxis_title="", margin=dict(t=40, b=0, l=0, r=0))
-    c1.plotly_chart(fig, width="stretch")
+    por_econ = by_cat.sort_values("economia")
+    f1 = _bar(por_econ, "economia", "dish_cat",
+              "Economia estimada por tipo de prato (R$)", color=ECONOMIA,
+              text=por_econ["economia"].apply(lambda v: f"R${v:,.0f}"), orient="h")
+    f1.update_layout(yaxis_title="")
+    c1.plotly_chart(f1, width="stretch")
 
     comp = pd.DataFrame({
         "cenário": ["Pago no iFood", "Cozinhando em casa"],
@@ -673,11 +749,12 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
         comp, x="cenário", y="valor", title="Pago no delivery × custo em casa (R$)",
         template=PLOTLY_TEMPLATE,
         text=comp["valor"].apply(lambda v: f"R${v:,.0f}"),
-        color="cenário", color_discrete_sequence=["#ef4444", "#10b981"],
+        color="cenário", color_discrete_sequence=[DINHEIRO, ECONOMIA],
     )
-    fig2.update_traces(textposition="outside")
-    fig2.update_layout(showlegend=False, xaxis_title="", margin=dict(t=40, b=0, l=0, r=0))
-    c2.plotly_chart(fig2, width="stretch")
+    fig2.update_traces(textposition="outside", textfont=dict(color=INK_MUTE),
+                       marker_line_color=SURFACE, marker_line_width=2)
+    fig2.update_layout(showlegend=False, xaxis_title="")
+    c2.plotly_chart(_cromo(fig2), width="stretch")
 
     # Top pratos: o que mais te custou X e quanto seria o Y
     with st.expander("🔎 Ver economia prato a prato (top 30)"):
@@ -727,23 +804,19 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
                 .sort_values("total", ascending=False)
             )
             c1, c2 = st.columns(2)
-            fig1 = px.pie(
-                by_cat, names="category", values="total", hole=0.45,
-                title="Gasto por categoria (R$)", template=PLOTLY_TEMPLATE,
+            # Barra, não rosca: com o filtro padrão (Categoria = Restaurante)
+            # a rosca virava uma fatia só marcando 100% — não dizia nada. Em
+            # barra o par "gasto | pedidos" fica igual ao resto do dashboard.
+            c1.plotly_chart(
+                _bar(by_cat, "category", "total", "Gasto por categoria (R$)",
+                     text=by_cat["total"].apply(lambda v: f"R${v:,.0f}")),
+                width="stretch",
             )
-            fig1.update_traces(textinfo="label+percent+value",
-                               texttemplate="%{label}<br>%{percent}<br>R$%{value:,.0f}")
-            fig1.update_layout(margin=dict(t=50, b=0, l=0, r=0), showlegend=False)
-            c1.plotly_chart(fig1, width="stretch")
-
-            fig2 = px.bar(
-                by_cat, x="category", y="pedidos",
-                title="Nº de pedidos por categoria", template=PLOTLY_TEMPLATE,
-                text="pedidos",
+            c2.plotly_chart(
+                _bar(by_cat, "category", "pedidos", "Nº de pedidos por categoria",
+                     color=PEDIDOS, text=by_cat["pedidos"]),
+                width="stretch",
             )
-            fig2.update_traces(marker_color="#3b82f6", textposition="outside")
-            fig2.update_layout(showlegend=False, margin=dict(t=40, b=0, l=0, r=0))
-            c2.plotly_chart(fig2, width="stretch")
 
             disp = by_cat.copy()
             disp.columns = ["Categoria", "Pedidos", "Total (R$)", "Ticket médio (R$)"]
@@ -762,24 +835,18 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
             .head(top_n)
         )
         c1, c2 = st.columns(2)
-        fig1 = px.bar(
-            by_rest.sort_values("pedidos"), x="pedidos", y="restaurant_name",
-            orientation="h", title="Por frequência",
-            template=PLOTLY_TEMPLATE, text="pedidos",
-        )
-        fig1.update_traces(marker_color=ACCENT)
-        fig1.update_layout(yaxis_title="", margin=dict(t=40, b=0, l=0, r=0))
-        c1.plotly_chart(fig1, width="stretch")
+        # As cores estavam trocadas aqui: frequência (contagem) saía vermelha e
+        # valor gasto saía azul — o inverso do resto do dashboard.
+        f1 = _bar(by_rest.sort_values("pedidos"), "pedidos", "restaurant_name",
+                  "Por frequência", color=PEDIDOS, text="pedidos", orient="h")
+        f1.update_layout(yaxis_title="")
+        c1.plotly_chart(f1, width="stretch")
 
-        fig2 = px.bar(
-            by_rest.sort_values("total"), x="total", y="restaurant_name",
-            orientation="h", title="Por valor gasto (R$)",
-            template=PLOTLY_TEMPLATE,
-            text=by_rest.sort_values("total")["total"].apply(lambda v: f"R${v:,.0f}"),
-        )
-        fig2.update_traces(marker_color="#3b82f6")
-        fig2.update_layout(yaxis_title="", margin=dict(t=40, b=0, l=0, r=0))
-        c2.plotly_chart(fig2, width="stretch")
+        por_valor = by_rest.sort_values("total")
+        f2 = _bar(por_valor, "total", "restaurant_name", "Por valor gasto (R$)",
+                  text=por_valor["total"].apply(lambda v: f"R${v:,.0f}"), orient="h")
+        f2.update_layout(yaxis_title="")
+        c2.plotly_chart(f2, width="stretch")
 
     elif aba == "Itens mais pedidos":
         if items_df.empty:
@@ -793,13 +860,11 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
             .sort_values("total_qty", ascending=False)
             .head(top_n_i)
         )
-        fig = px.bar(
-            by_item.sort_values("total_qty"), x="total_qty", y="item_name",
-            orientation="h", title=f"Top {top_n_i} itens mais pedidos (quantidade)",
-            template=PLOTLY_TEMPLATE, text="total_qty",
-        )
-        fig.update_traces(marker_color=ACCENT)
-        fig.update_layout(yaxis_title="", margin=dict(t=40, b=0, l=0, r=0))
+        # quantidade é contagem → azul, não vermelho
+        fig = _bar(by_item.sort_values("total_qty"), "total_qty", "item_name",
+                   f"Top {top_n_i} itens mais pedidos (quantidade)",
+                   color=PEDIDOS, text="total_qty", orient="h")
+        fig.update_layout(yaxis_title="")
         st.plotly_chart(fig, width="stretch")
 
     elif aba == "Distribuição de custos":
@@ -817,23 +882,36 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
 
         labels = ["Itens (líq.)", "Taxa entrega", "Taxa serviço"]
         values = [items_net, total_delivery, total_service]
-        colors = ["#ef4444", "#3b82f6", "#f59e0b"]
 
         fig = go.Figure(
             go.Pie(
                 labels=labels, values=values,
-                marker=dict(colors=colors),
-                hole=0.45,
-                textinfo="label+percent+value",
-                texttemplate="%{label}<br>%{percent}<br>R$%{value:,.2f}",
+                # As 3 matizes validadas; identidade vem da legenda, não da cor
+                # sozinha. O âmbar antigo (#f59e0b) reprovava na faixa de
+                # luminosidade para fundo escuro.
+                marker=dict(colors=[DINHEIRO, PEDIDOS, ECONOMIA],
+                            line=dict(color=SURFACE, width=2)),
+                hole=0.55,
+                # Rótulo só na fatia em que ele cabe. As taxas são ~2-4% cada:
+                # com label+valor por fora eles se sobrepunham, e por dentro
+                # não cabem na lasca. Ficam na legenda, no hover e no texto
+                # abaixo — nenhum valor depende só do tooltip.
+                text=[f"{v / sum(values):.0%}" if v / sum(values) >= 0.08 else ""
+                      for v in values],
+                textinfo="text",
+                textposition="inside",
+                insidetextfont=dict(color="#0e1117", size=13),
+                hovertemplate="%{label}<br>R$ %{value:,.2f} (%{percent})<extra></extra>",
+                sort=False,
             )
         )
         fig.update_layout(
             title=f"Distribuição do que você pagou (total R$ {total_paid:,.2f})",
             template=PLOTLY_TEMPLATE,
-            margin=dict(t=50, b=0, l=0, r=0),
+            showlegend=True,
+            legend=dict(orientation="h", y=-0.05, font=dict(color=INK_MUTE)),
         )
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(_cromo(fig), width="stretch")
         st.caption(
             f"💰 Itens (bruto): R$ {total_subtotal:,.2f}  ·  "
             f"🏷️ Economia em cupons: −R$ {total_discount:,.2f}  →  "
