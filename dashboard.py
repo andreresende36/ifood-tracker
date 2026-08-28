@@ -5,6 +5,7 @@ Run: streamlit run dashboard.py
 """
 
 import io
+import os
 import subprocess
 import sys
 import time
@@ -900,9 +901,12 @@ def main():
     # default sempre primeiro → abre por padrão ao iniciar o dashboard
     if "default" in profiles:
         profiles = ["default"] + [p for p in profiles if p != "default"]
+    # run.sh passa o perfil escolhido por aqui; sem ele, abre no primeiro
+    initial = os.environ.get("IFOOD_PROFILE", "")
+    index = profiles.index(initial) if initial in profiles else 0
     sel_profile = st.sidebar.selectbox(
         "👤 Perfil", profiles,
-        index=0,
+        index=index,
         format_func=profile_display_name,
         help="Cada perfil é uma pessoa, com banco de dados separado.",
     )
