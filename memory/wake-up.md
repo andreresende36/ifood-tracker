@@ -1,7 +1,7 @@
 # Wake-up — iFood Order Tracker
 
-Estado em **29/08/2026**, fim da sessão de adaptação. Última linha do
-`git log`: `b8bd037`. Working tree limpo, tudo em `main` e no remoto.
+Estado em **29/08/2026**, fim da sessão de performance e polimento. Última
+linha do `git log`: `90d9d8f`. Working tree limpo, tudo em `main` e no remoto.
 
 Leia junto: `PRODUCT.md` (verdade de produto), `DESIGN.md` (sistema visual e
 as regras nomeadas), `.impeccable/critique/` (a auditoria de UX que originou
@@ -11,7 +11,8 @@ metade do trabalho abaixo).
 
 ## Onde estamos
 
-Em 29/08 entrou a rodada de **adapt** — celular e tablet, com o desktop
+Em 29/08, depois da coleta, entraram **optimize** e **polish**. Antes delas,
+na mesma data, a rodada de **adapt** — celular e tablet, com o desktop
 intocado. Antes dela, o painel passou por três rodadas do `/impeccable`: **shape**
 (reordenação da tela), **critique** (15/40) e **audit** (14/20). O que os dois
 últimos apontaram está corrigido, exceto um item documentado como limitação e
@@ -37,6 +38,8 @@ Nove commits, todos em `main` e no remoto:
 | `92c630c` | Capa no topo da coluna de conteúdo, no feitio do Notion |
 | `2f8ef53` | `/impeccable adapt`: celular e tablet, desktop intocado (29/08) |
 | `b8bd037` | Coleta de 29/08/2026, 260 pedidos |
+| `d710f6d` | `/impeccable optimize`: quatro fragmentos, planilha cacheada, logo servido |
+| `90d9d8f` | `/impeccable polish`: o veredito do mês nomeia o mês (29/08) |
 
 ---
 
@@ -233,7 +236,51 @@ transição suave para o conteúdo.
   16px (o bloco do `<style>` conta como irmão de altura zero) e a capa zera o
   respiro de 2.25rem.
 
-**9. Nada mais está pendente.** Não há backlog aberto — as duas ressalvas
+**10. Performance** (commit `d710f6d`). Rodada de `/impeccable optimize`.
+O Streamlit reexecutava a página inteira a cada widget.
+
+- **Medido antes:** marcar "Crescente" na tabela custava 818–1007ms, com 585ms
+  de main thread bloqueada, remontando KPIs, contrafactual e gráficos.
+- **Quatro `@st.fragment`, um por alcance de controle:** a tabela, "Quando e
+  quanto", "Restaurantes e itens", e o par resumo+contrafactual. Este último é
+  um fragmento só porque o slider de otimismo mora embaixo e alimenta o
+  veredito de cima — separá-los congelaria o número do topo.
+- Depois: ordenar a tabela ~140ms, trocar de painel ~400ms, passo do otimismo
+  ~500ms. Gráficos e tabela fora do fragmento provados intactos (marca em nó
+  DOM + `isConnected`).
+- `_to_excel` cacheado: a planilha do export era montada em todo rerun (137ms
+  de openpyxl) porque o `download_button` exige os bytes para desenhar o
+  botão. Agora 1,7ms no cache, com `max_entries=8` porque a busca é texto
+  livre.
+- O wordmark saiu do `data:` URI (63 KB por rerun) para `static/
+  ifood-logo.webp`, 240px para os 38px em que aparece. O hash do `?v=` é
+  cacheado — a capa eram 176 KB relidos e digeridos a cada rerun.
+- **Medido e descartado:** mover o bloco de CSS de 35 KB para arquivo estático.
+  O nó `<style>` e a `<img>` sobrevivem a um rerun completo (provado com marca
+  em nó DOM) — o React não os reinsere, então não há custo de reinserção a
+  cortar, e o ganho não pagaria a armadilha de truncamento do servidor
+  estático.
+- O que sobra dos ~500ms do slider é Plotly redesenhando os dois gráficos da
+  seção. O lado Python é ~15ms. Não há mais o que cortar sem mexer no que a
+  tela mostra.
+
+**11. Polimento** (commit `90d9d8f`). Rodada de `/impeccable polish` sobre as
+pendências da crítica de 28/08.
+
+- Confirmados **já resolvidos** no render, não no changelog: o classificador
+  de pratos (parmegiana não sai mais como bebida), os quatro painéis
+  tautológicos (`painel_vazio` cobre os quatro), os alvos de toque, zero
+  `box-shadow` computada na página, nenhum raio fora do sistema, medida em
+  72ch.
+- Corrigido o que sobrou, e é estado enganoso: o veredito do mês roda sobre o
+  histórico inteiro e a quantia ao lado é do filtro. Com o filtro de mês
+  limpo, "12% acima da média" encostava num total de dez meses e nada na linha
+  dizia que os 12% eram de agosto — a declaração existia, mas no fim de uma
+  legenda de 14px dois blocos abaixo. Agora o escopo entra na frente da frase
+  ("Em agosto de 2026, 12% acima da média") e só quando os dois não coincidem.
+- `DESIGN.md`: a regra do escopo no componente Ledger Head, mais o `Don't`.
+
+**12. Nada mais está pendente.** Não há backlog aberto — as duas ressalvas
 abertas estão no topo desta seção.
 
 ---
@@ -251,8 +298,14 @@ abertas estão no topo desta seção.
   mesma decisão dos quatro tiles da seção de cozinhar: aqueles continuam
   tiles. Aqui o que substituiu os três foi um número em Display, não um
   corte — pedidos e ticket médio seguem na tela, uma linha abaixo.
-- **Erros `<rect> negative width` no console: não são pendência.** O gatilho é
-  container de largura zero (aba em segundo plano). Carga normal é limpa.
+- **Erros `<rect> negative width` no console: não são pendência.** Provado em
+  29/08 com viewport fixado antes do load: aba nova a 1280×800 e a 375×812,
+  inclusive no painel "Top restaurantes" (o de maior `automargin`, 212px) —
+  **zero erros**. O gatilho é a aba do painel carregar com `innerWidth` 0, e aí
+  todo `st.columns` fica com largura 0, o filho herda os 16px de `min-width` do
+  Streamlit e o Plotly faz `16 − automargin`. Contagem de console em aba com
+  viewport zerado não vale nada: eu já reportei essa contagem como bug do app,
+  e não era.
 - **Coleta manual, perfis isolados, tudo local.** As três restrições
   invioláveis do `PRODUCT.md`, já testadas contra uma tentativa de deploy.
 
@@ -275,7 +328,15 @@ caminho seguro continua sendo com o Streamlit parado.
 **Medir com o painel do navegador escondido dá zero.** `innerWidth` volta 0,
 o `.block-container` mede 32px e todo `clamp` cai no piso — a tela parece
 quebrada e não está. Confira `innerWidth` antes de acreditar em qualquer
-medida. Foi o que aconteceu na primeira leitura desta rodada.
+medida. Mordeu duas vezes: na rodada de `bolder` e de novo em 29/08, onde
+produziu um bug inexistente com contagem e tudo. **O conserto é
+`resize_window` ANTES de navegar** — a emulação sobrevive ao reload, e o
+painel não segura viewport sozinho entre chamadas de ferramenta.
+
+**Screenshot exige o painel do navegador visível.** Com ele escondido a página
+não compõe frames e a captura estoura em 5s; leitura de texto, estilo
+computado e geometria continuam funcionando. Dá para verificar quase tudo sem
+pixel — menos julgar o desenho.
 
 **O `.stMarkdown p` do Streamlit ganha de classe sozinha.** Regra de `<p>`
 própria precisa do prefixo `.block-container`, senão o tamanho não aplica e o
