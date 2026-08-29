@@ -194,6 +194,44 @@ git add data/*.db && git commit -m "update pedidos" && git push
 
 `git add -A` é seguro — o `.gitignore` impede que as sessões do Chrome vazem.
 
+Se a réplica hospedada (seção abaixo) estiver no ar, use `./publish.sh` em vez
+do comando acima: ele só toca em `data/*.db` e `data/profiles.json`, mostra o
+que vai mudar e pede confirmação antes de empurrar.
+
+---
+
+## Réplica hospedada (opcional, gratuita, só leitura)
+
+O backend — coleta, login no iFood, escrita nos bancos — continua **só na
+máquina local**, com o Chrome à vista. O que pode subir é uma cópia do
+dashboard em modo leitura, para abrir o link de qualquer lugar sem estar na
+máquina que coletou.
+
+Como funciona: `data/*.db` já é versionado neste mesmo repositório, e o repo
+já é privado. Publicar uma coleta nova é `./publish.sh`; o
+[Streamlit Community Cloud](https://share.streamlit.io) reinicia o app
+sozinho a cada push em `main`. Nada mais precisa mudar de lugar.
+
+**Configurar uma vez (feito por você, exige login nas contas):**
+
+1. Em [share.streamlit.io](https://share.streamlit.io), "New app" → aponte
+   para este repositório, branch `main`, arquivo principal `dashboard.py`.
+2. Em *Advanced settings → Python dependencies file*, aponte para
+   `requirements-cloud.txt` — a versão sem Playwright, que a réplica não usa
+   (ela nunca abre Chrome nem coleta).
+3. Em *Advanced settings → Secrets*, cole:
+   ```toml
+   cloud_mode = true
+   ```
+   É essa chave que tira "Coletar" e "Renomear" da gaveta lá — sem Chrome
+   remoto, esses botões prometeriam o que não podem cumprir.
+4. Em *Settings → Sharing*, restrinja a visualização aos e-mails de vocês
+   dois. Sem isso a URL é pública, e o dashboard mostra gasto real com nome de
+   restaurante.
+
+Depois disso, o ciclo normal é: coletar localmente (`./run.sh`) → publicar
+quando quiser (`./publish.sh`) → a réplica atualiza sozinha em alguns minutos.
+
 ---
 
 ## Troubleshooting
@@ -216,6 +254,8 @@ ifood-tracker/
 ├── dashboard.py          # Dashboard Streamlit
 ├── database.py           # Camada SQLite (orders + order_items, multi-perfil)
 ├── requirements.txt
+├── requirements-cloud.txt  # Idem, sem Playwright — usado pela réplica hospedada
+├── publish.sh             # git add/commit/push só de data/*.db, com confirmação
 ├── data/                 # Bancos *.db (versionados) + raw_sample*.json + logs
 ├── chrome_profile/       # Sessão Chrome do perfil default (NÃO versionado)
 └── profiles/             # Sessões Chrome dos demais perfis (NÃO versionado)

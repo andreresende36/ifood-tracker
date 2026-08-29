@@ -15,3 +15,6 @@ __pycache__/
 # data/ é versionado de propósito p/ guardar o histórico de pedidos.
 # Mas ignora artefatos voláteis dentro dele:
 data/*.log
+
+# ── Segredos locais de teste (nunca sobem) ──────────────────────────────────
+.streamlit/secrets.toml

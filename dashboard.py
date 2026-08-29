@@ -55,6 +55,18 @@ def _static_url(nome: str) -> str:
     return f"/app/static/{nome}?v={versao}"
 
 
+# ── Modo nuvem ────────────────────────────────────────────────────────────────
+# A réplica hospedada é só leitura: ela não tem o Chrome nem a sessão logada
+# do iFood, então "Coletar" ali seria um botão que promete o que não pode
+# cumprir. A chave vem de st.secrets — no Streamlit Community Cloud ela é
+# configurada no painel do app, sem tocar em código; localmente não existe
+# secrets.toml, e o acesso cai no padrão local.
+try:
+    CLOUD_MODE = bool(st.secrets.get("cloud_mode", False))
+except Exception:
+    CLOUD_MODE = False
+
+
 st.set_page_config(
     page_title="iFood — Histórico de Pedidos",
     page_icon=str(ICONE) if ICONE.exists() else "🛵",
@@ -2520,7 +2532,20 @@ def _acoes_do_perfil(sel_profile: str, profiles: list[str]):
     cinza que não faz nada ocupa espaço sem dizer o que fazer. Sobra
     "Recarregar", que relê os dois, e uma linha dizendo onde a coleta mora.
     Coleta continua sendo um ato de uma pessoa, com o Chrome à vista.
+
+    Na réplica hospedada NENHUM perfil tem ação — nem coletar (sem Chrome ali),
+    nem renomear (a escrita em `data/profiles.json` seria perdida no próximo
+    deploy, porque o disco da nuvem não é a fonte de verdade) nem recarregar
+    (redundante: um `git push` já reinicia o app inteiro com o arquivo novo).
     """
+    if CLOUD_MODE:
+        st.sidebar.caption(
+            "Esta é a cópia hospedada, só para consulta. A coleta é feita na "
+            "máquina local e publicada de lá — aqui não há como coletar nem "
+            "renomear perfil."
+        )
+        return
+
     if sel_profile == CASAL:
         if st.sidebar.button(
             "Recarregar", icon=":material/refresh:", width="stretch",
@@ -2651,7 +2676,14 @@ def main():
     if orders_df.empty:
         # No conjunto não há o que coletar: o vazio ali significa que nenhuma
         # das pessoas tem pedido, e a saída é coletar em cada uma.
-        if sel_profile == CASAL:
+        if CLOUD_MODE:
+            st.warning(
+                "Nenhum pedido publicado ainda para este perfil. A coleta é "
+                "feita na máquina local, e o dado chega aqui quando alguém "
+                "publica uma atualização.",
+                icon=":material/inbox:",
+            )
+        elif sel_profile == CASAL:
             st.warning(
                 "Nenhum pedido em nenhuma das pessoas. Escolha uma delas na "
                 "barra lateral e clique em **Coletar / atualizar pedidos**.",
@@ -2664,12 +2696,14 @@ def main():
                 f"ou rode `python scraper.py -p {sel_profile}`.",
                 icon=":material/inbox:",
             )
-        # Aqui o rerun é necessário: o banco já foi lido acima nesta execução,
-        # e sem ele a tela continuaria mostrando o vazio até o próximo clique.
-        # É seguro: o espelho de `_filter_default` sobrevive a rerun.
-        if st.button("Recarregar", icon=":material/refresh:"):
-            reload()
-            st.rerun()
+        if not CLOUD_MODE:
+            # Aqui o rerun é necessário: o banco já foi lido acima nesta
+            # execução, e sem ele a tela continuaria mostrando o vazio até o
+            # próximo clique. É seguro: o espelho de `_filter_default`
+            # sobrevive a rerun.
+            if st.button("Recarregar", icon=":material/refresh:"):
+                reload()
+                st.rerun()
         return
 
     # A procedência do dado é legenda do título, não uma linha com botão ao

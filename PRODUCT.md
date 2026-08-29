@@ -60,9 +60,31 @@ em casa; exporta CSV e Excel.
 
 Restrições que trabalho futuro **não pode violar**:
 
-- **Nunca sai da máquina local.** Sem deploy remoto, sem nuvem. Isso já foi
-  tentado (Railway) e foi exatamente o que quebrou o isolamento entre os
-  perfis. É decisão, não limitação técnica.
+- **A verdade do dado é sempre local.** Coleta, login no iFood e escrita nos
+  bancos SQLite acontecem só na máquina local, com o Chrome à vista. Nenhum
+  processo remoto autentica na conta de ninguém, nenhum processo remoto grava
+  em `data/*.db`. Isso é decisão, não limitação técnica, e não muda com a
+  réplica hospedada abaixo.
+
+  **Revisão de 29/08/2026:** até aqui a regra era "nunca sai da máquina
+  local — sem deploy remoto, sem nuvem", depois de uma tentativa no Railway
+  ter subido tudo: bancos, dashboard, scraper e o login das duas contas do
+  iFood rodando remoto. Foi rodar coleta e login remotos que consumiu recurso
+  demais e misturou os bancos — não o fato de existir uma cópia na internet.
+  André pediu uma réplica só de leitura, alimentada pelo mesmo backend local,
+  e a regra foi reescrita para o que ela de fato protegia: onde o dado é
+  ESCRITO, não onde ele pode ser LIDO.
+
+  A réplica existe em `IFOOD_CLOUD_MODE` (`dashboard.py`, `CLOUD_MODE`): lá
+  "Coletar" e "Renomear" desaparecem da gaveta — sem Chrome ali, e escrever em
+  `data/profiles.json` no disco da nuvem se perderia no próximo deploy — e
+  "Recarregar" também some, porque é redundante: publicar já reinicia o app
+  inteiro com o arquivo novo. `data/*.db` chega lá do jeito mais simples que
+  existia: ele já é rastreado neste mesmo repo, de propósito, e o repo já é
+  privado. `publish.sh` é o único caminho de escrita — um script que o André
+  roda à mão, pede confirmação, e só toca em `data/*.db` e
+  `data/profiles.json`. Nada disso dá à réplica hospedada permissão para
+  coletar, logar ou escrever; ela só lê o que a máquina local publicou.
 - **Nenhum pedido muda de dono.** Um banco por pessoa, e cada pedido carrega
   quem o fez em qualquer lugar que o mostre. Esta é a propriedade de correção,
   e ela não se negocia.
