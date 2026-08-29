@@ -118,11 +118,12 @@ valor solto. Detector limpo (geral e `--scope layout`).
 não limpo. Para ter sinal, extraia o bloco `<style>` para um `.html` e varra
 isso. O motor de URL exige `puppeteer`, que não está instalado.
 
-**Código morto pendente em `static/localize.html`.** O bloco que conserta o
-`alt="Logo"` do `st.logo` (linhas ~126-129) não casa com nada desde que a marca
-virou placa. Não foi apagado nesta sessão porque editar esse arquivo com o
-servidor no ar serve o conteúdo truncado e quebra o script inteiro — apague
-com o Streamlit parado.
+**Uma observação contra a pegadinha do tamanho fixo.** O bloco morto do
+`alt="Logo"` foi removido do `localize.html` **com o servidor no ar**, e o
+`curl` do `/app/static/localize.html` voltou byte a byte igual ao arquivo
+(6553, mesmo md5) — sem truncar. Um ponto só, e a favor: a pegadinha
+documentada abaixo custou uma sessão e fica onde está. Se for editar, o
+caminho seguro continua sendo com o Streamlit parado.
 
 **O `.stMarkdown p` do Streamlit ganha de classe sozinha.** Regra de `<p>`
 própria precisa do prefixo `.block-container`, senão o tamanho não aplica e o

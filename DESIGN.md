@@ -467,9 +467,8 @@ sem margem, mas as letras ocupam ~60% da caixa (o resto é o traço acima), ent�
 casar a altura da imagem com a do texto deixa a marca menor do que ele.
 
 O `h1` é escrito à mão — `st.title` não aceita nada ao lado — e o `alt` sai de
-verdade daqui. O conserto que o `localize.html` fazia no `alt="Logo"` genérico
-do `st.logo` virou código morto: não casa com nada, e sai na próxima vez que o
-arquivo for editado com o servidor parado.
+verdade daqui, sem depender de conserto no DOM. O bloco que o `localize.html`
+mantinha para trocar o `alt="Logo"` genérico do `st.logo` foi removido junto.
 
 O PNG vai embutido em `data:` URI. A pasta `static/` já serve o
 `localize.html` e pendurar a marca nela acrescentaria uma requisição e mais

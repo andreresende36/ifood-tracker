@@ -123,10 +123,6 @@
       const t = n.nodeValue.trim();
       if (MAP[t]) n.nodeValue = n.nodeValue.replace(t, MAP[t]);
     }
-    // alt genérico do logo, que o st.logo não deixa configurar
-    doc.querySelectorAll('img[alt="Logo"]').forEach((i) => {
-      i.setAttribute("alt", "iFood — histórico de pedidos");
-    });
     doc.querySelectorAll("[aria-label],[title]").forEach((el) => {
       for (const attr of ["aria-label", "title"]) {
         const v = el.getAttribute(attr);
