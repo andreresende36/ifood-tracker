@@ -27,7 +27,12 @@ from database import (
 # ── Page config ───────────────────────────────────────────────────────────────
 
 ASSETS = Path(__file__).parent / "assets"
-LOGO = ASSETS / "ifood-logo.png"      # wordmark aparado
+LOGO = ASSETS / "ifood-logo.png"  # wordmark aparado
+# A capa mora em static/ e não em assets/, e não vai embutida como o logo: são
+# 117 KB, e o markdown é reenviado pelo websocket a CADA rerun. Embutida, seria
+# esse peso em toda mexida de filtro; servida, o navegador guarda a primeira e
+# não pede de novo.
+CAPA = Path(__file__).parent / "static" / "capa-avenida.jpg"
 ICONE = ASSETS / "ifood-icon.png"     # símbolo vazado em tile — legível a 16px
 
 @st.cache_data
@@ -73,6 +78,70 @@ st.markdown("""
     /* sem prefixo de tag: o rótulo é um <label>, não um <div> — com
        "div[...]" a regra nunca casava e rótulo e valor saíam no mesmo tom */
     [data-testid="stMetricLabel"] { opacity: 0.72; }
+
+    /* ── Capa ──────────────────────────────────────────────────────────────
+       Uma fotografia de largura inteira no topo da coluna de conteúdo, no
+       feitio das capas do Notion. Ela sangra pelos dois lados e some por baixo
+       do conteúdo em vez de terminar num corte.
+
+       **Só na coluna de conteúdo.** A sidebar não recebe capa: ali estão os
+       filtros, e uma foto atrás de controle é ruído atrás de trabalho.
+
+       O sangramento cancela o padding horizontal do `.block-container`
+       (80px, 16px no estreito) com margem negativa, e o vertical desconta só
+       os 2.25rem do respiro — os 60px do cabeçalho do Streamlit ficam, porque
+       aquela barra é OPACA e da cor da página: a capa passaria por baixo dela
+       sem aparecer. Assim ela começa exatamente onde o conteúdo começa a ser
+       visível, e rola para trás do cabeçalho como a do Notion faz.
+
+       A transição suave é `mask-image`, não uma faixa de gradiente por cima:
+       a máscara dissolve a própria foto no fundo da página, então funciona
+       sobre qualquer superfície e não inventa uma quinta camada de cor. A
+       imagem vai a zero em 100% e começa a ceder aos 55% — a parte de baixo é
+       asfalto, e é ela que precisa sumir. O começo do esmaecimento é o que
+       decide se o logo da bolsa ainda se lê: aos 45% ele saía a ~65% de
+       opacidade; aos 55%, a ~80%.
+
+       Altura em `36vh` com piso e teto — um quinto a mais que os 30vh do
+       Notion, para caber a bolsa inteira e o topo do capacete. Numa coluna de
+       1140px a foto renderiza com ~760px de altura e a janela mostra uns 43%
+       dela; capa é recorte, não a foto inteira.
+
+       O `min(36vh, 66vw)` existe pelo estreito: em 375px a foto renderiza com
+       ~250px de altura, e uma caixa mais alta que isso faria o `cover`
+       AMPLIAR a imagem para preencher — aí ela passa a ser cortada nas
+       laterais, o `object-position` vertical deixa de ter efeito e o céu volta
+       ao quadro. 66vw é a altura que a própria imagem tem naquela largura.
+
+       O recorte (`object-position: center 31%`) prende a faixa opaca no
+       capacete e na bolsa e mantém o CÉU fora do quadro — numa página quase
+       preta, uma faixa de céu claro no topo seria a maior área de luz da tela.
+       O que cede para a máscara é o asfalto. */
+    /* Dois cancelamentos, e cada um tem dono: o container zera o gap de 16px
+       que o bloco vertical põe antes do primeiro elemento visível (o bloco do
+       <style> conta como irmão de altura zero), e a capa zera o respiro de
+       2.25rem do topo da página. Sobram os 60px do cabeçalho, que é o que a
+       gente quer manter. */
+    .stElementContainer:has(.capa) { margin-top: -16px; }
+    .capa {
+        margin: -2.25rem -80px 0;
+        height: clamp(180px, min(36vh, 66vw), 360px);
+        overflow: hidden;
+    }
+    .capa img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 31%;
+        -webkit-mask-image: linear-gradient(to bottom,
+                            #000 0%, #000 55%, transparent 100%);
+        mask-image: linear-gradient(to bottom,
+                    #000 0%, #000 55%, transparent 100%);
+    }
+    @media (max-width: 575.98px) {
+        .capa { margin-left: -1rem; margin-right: -1rem; }
+    }
 
     /* ── Cabeçalho-extrato ────────────────────────────────────────────────
        O degrau de Display deixou de servir ao nome da tela e passou a servir
@@ -2032,6 +2101,19 @@ def orders_table(df: pd.DataFrame):
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    # A capa vem antes de tudo, na largura inteira da coluna. `?v=` com o hash
+    # do arquivo pela mesma razão do localize.html: /app/static/ é servido com
+    # cache longo, e sem isso trocar a foto não trocaria o que se vê.
+    if CAPA.exists():
+        versao = hashlib.sha1(CAPA.read_bytes()).hexdigest()[:8]
+        st.markdown(
+            f'<div class="capa"><img src="/app/static/{CAPA.name}?v={versao}" '
+            f'alt="Entregador do iFood numa moto, visto de trás, atravessando uma '
+            f'avenida da cidade com a bolsa térmica nas costas">'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
     # A marca fica ao lado do nome da tela, não no slot de logo do Streamlit:
     # lá ela mora num canto acima da sidebar, longe do título, e nas duas
     # posições ao mesmo tempo seriam duas marcas na mesma tela.

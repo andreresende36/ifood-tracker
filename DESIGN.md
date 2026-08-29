@@ -516,6 +516,35 @@ valor em 700/26.4px com tracking −0.02em. A ausência de moldura é intenciona
 O **Ledger Head** é este mesmo componente na escala de display; a anatomia é a
 mesma e a única diferença é o degrau de tipo.
 
+### Capa
+Uma fotografia de largura inteira no topo da coluna de conteúdo, no feitio das
+capas do Notion: sangra pelos dois lados e **some por baixo do conteúdo em vez
+de terminar num corte**.
+
+**Só na coluna de conteúdo.** A sidebar não recebe capa — ali estão os filtros,
+e foto atrás de controle é ruído atrás de trabalho.
+
+A transição suave é `mask-image`, não uma faixa de gradiente por cima: a
+máscara dissolve a própria foto no fundo da página, então funciona sobre
+qualquer superfície e não inventa uma quinta camada de cor. A imagem começa a
+ceder aos 45% e chega a zero em 100% — a metade de baixo é asfalto, e é ela que
+precisa sumir.
+
+Altura em `30vh` com piso e teto, a mesma proporção do Notion. Capa é
+**recorte**, não a foto inteira: numa coluna de 1140px a imagem renderiza com
+~760px de altura e a janela mostra uns 35% dela. O `object-position` prende a
+faixa opaca no sujeito — nesta proporção não cabem o rosto do entregador e o
+farol da moto ao mesmo tempo, e o rosto é quem conta a cena.
+
+O sangramento cancela o padding horizontal do `.block-container` (80px, 16px no
+estreito) com margem negativa. Na vertical são **dois cancelamentos com donos
+diferentes**: o container zera o gap de 16px que o bloco vertical põe antes do
+primeiro elemento visível (o bloco do `<style>` conta como irmão de altura
+zero), e a capa zera o respiro de 2.25rem do topo. Os 60px do cabeçalho ficam,
+de propósito: aquela barra é **opaca e da cor da página**, então a capa passaria
+por baixo dela sem aparecer. Assim ela começa onde o conteúdo começa a ser
+visível, e rola para trás do cabeçalho como a do Notion.
+
 ### Placa
 O wordmark e o nome da tela na mesma linha, no topo: `<img>` de 38px de altura
 ao lado de um `h1` no degrau de Section, alinhados pelo centro com 0.7rem de
@@ -536,6 +565,13 @@ mantinha para trocar o `alt="Logo"` genérico do `st.logo` foi removido junto.
 O PNG vai embutido em `data:` URI. A pasta `static/` já serve o
 `localize.html` e pendurar a marca nela acrescentaria uma requisição e mais
 uma armadilha de cache.
+
+**A regra do peso decide onde o arquivo mora.** O logo tem 47 KB e vai
+embutido; a capa tem 117 KB e vai **servida de `static/`**, porque o markdown é
+reenviado pelo websocket a cada rerun — embutida, ela custaria esse peso em
+toda mexida de filtro. Servida, o navegador guarda a primeira e não pede de
+novo, e o `?v=` com o hash do arquivo garante que trocar a foto troque o que se
+vê. `assets/` guarda as marcas; `static/` guarda o que é servido.
 
 ### Ledger Head
 O topo da tela, e o único lugar onde o degrau de Display aparece. Um bloco só
@@ -830,6 +866,8 @@ sinal de que havia movimento decorativo.
   linhas o ícone e a ressalva viram colunas.
 - **Don't** dar tamanho fixo à quantia: ela vai de três a seis dígitos, e o
   recorte de um ano inteiro corta em 375px.
+- **Don't** embutir em `data:` URI arquivo que pese: o markdown vai pelo
+  websocket a cada rerun, e o custo se paga em toda mexida de filtro.
 - **Don't** reativar o `st.logo`: a marca está na placa, e nos dois lugares ao
   mesmo tempo vira duas marcas na mesma tela.
 - **Don't** deixar o gap de 16px do Streamlit governar sozinho uma coluna

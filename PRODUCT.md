@@ -82,6 +82,16 @@ Identidade visual do iFood, por escolha explícita do usuário: logo em
 `assets/ifood-logo.png` (wordmark) e `assets/ifood-icon.png` (símbolo em tile,
 para favicon), vermelho `#ea1d2c` amostrado do próprio logo.
 
+Capa em `static/capa-avenida.jpg`: um entregador de moto atravessando uma
+avenida, visto de trás, com a bolsa térmica nas costas — também por escolha
+explícita do usuário, que comparou com uma alternativa noturna e ficou com
+esta. É a outra metade da cena de uso: a entrega que acontece enquanto o casal
+decide se pede ou cozinha.
+
+Os originais ficam em `assets/` (`capa-avenida-original.jpg`, 2172px, e
+`capa-noturna.jpg`, a alternativa descartada); `static/` guarda só a versão
+servida, redimensionada para 1600px.
+
 Uso é pessoal e local — a ferramenta consome a conta do próprio usuário e nunca
 é publicada. Não é um produto do iFood nem se apresenta como tal.
 

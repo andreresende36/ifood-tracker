@@ -167,7 +167,36 @@ assim: ida 1→0.55 em 220ms com 220ms de atraso, volta em 160ms sem atraso,
 sidebar em 1. O *feel* continua não verificado; abra o painel e troque de
 painel de análise para julgar.
 
-**8. Nada mais está pendente.** Não há backlog aberto.
+**8. Capa no topo** (sem commit). Pedido do André: a foto que ele largou em
+`assets/` vai no topo do corpo principal, no feitio das capas do Notion, com
+transição suave para o conteúdo.
+
+- A foto escolhida foi a **diurna** (`static/capa-avenida.jpg`), depois de
+  comparar com uma noturna na tela. Redimensionada de 2172px para 1600 e
+  reencodada: 424 KB → 176 KB. **Servida, não embutida** — o markdown vai pelo
+  websocket a cada rerun.
+- Os originais ficam em `assets/`: `capa-avenida-original.jpg` (master) e
+  `capa-noturna.jpg` (a descartada, guardada a pedido de ninguém — apagar se
+  não for usar).
+- Altura `clamp(180px, min(36vh, 66vw), 360px)`: 36vh é um quinto a mais que os
+  30vh do Notion, pedido do André para caber a bolsa e o topo do capacete.
+- Sangra os 80px de padding do `.block-container` (16px no estreito) e some por
+  `mask-image`, não por faixa de gradiente por cima.
+- `object-position: center 31%` e o esmaecimento começando aos 55% (e não
+  45%): é o que decide se o logo da bolsa ainda se lê — a 45% ele saía a ~65%
+  de opacidade, a 55% sai a ~80%.
+- **O `min(36vh, 66vw)` é o conserto do estreito:** em 375px a foto renderiza
+  com ~250px de altura, e caixa mais alta que isso faz o `cover` AMPLIAR a
+  imagem — aí ela é cortada nas laterais, o `object-position` vertical perde o
+  efeito e o céu volta ao quadro. 66vw é a altura que a imagem tem naquela
+  largura.
+- Começa em y=60, embaixo do cabeçalho do Streamlit, que é **opaco e da cor da
+  página** — a capa passaria por baixo dele sem aparecer.
+- Dois cancelamentos verticais com donos diferentes: o container zera o gap de
+  16px (o bloco do `<style>` conta como irmão de altura zero) e a capa zera o
+  respiro de 2.25rem.
+
+**9. Nada mais está pendente.** Não há backlog aberto.
 
 ---
 
