@@ -79,6 +79,10 @@ spacing:
   block-above: "1.75rem"
   block-below: "0.5rem"
   page-top: "calc(60px + 2.25rem)"
+  cola: "8px"
+  base: "16px"
+  solta: "28px"
+  abaixo-do-titulo: "20px"
 components:
   button-primary:
     backgroundColor: "{colors.dinheiro-acao}"
@@ -300,6 +304,31 @@ próprio conteúdo em vez de flutuar no meio do vão. O topo da página respira
 2.25rem — medidos **depois** do cabeçalho do Streamlit, que tem 60px e fica por
 cima do conteúdo; daí `calc(60px + 2.25rem)`, e não 2.25rem crus.
 
+### A escala de espaço
+
+O Streamlit empilha tudo num flex column com `gap: 16px`. Sozinho, isso deixa
+a coluna sem cadência: a nota de rodapé fica tão longe do número quanto o
+número fica do próximo assunto, e espaço igual é hierarquia nenhuma. Fora o
+título de seção, a página inteira tinha um valor de espaço só.
+
+Três degraus, e um papel para cada:
+
+| degrau | valor | papel |
+|---|---|---|
+| **cola** | `{spacing.cola}` | mesmo assunto: a legenda e o que ela anota; dois controles do mesmo grupo; os botões de exportar e a tabela em que agem |
+| **base** | `{spacing.base}` | irmãos comuns — o padrão do framework, mantido |
+| **solta** | `{spacing.solta}` | troca de sub-bloco dentro da seção: depois do grupo de controle, depois de uma corrida de legendas |
+
+Abaixo de um título de seção os `{spacing.section-below}` dele entram na
+conta: **`{spacing.abaixo-do-titulo}`** para o que pertence ao título
+(subtítulo da seção, seletor de painel) e **`{spacing.solta}`** para o conteúdo
+que começa depois dele.
+
+O gap do framework não tem API, então cada degrau é escrito como um delta de
+`margin-top` sobre os 16px. Os seletores usam `:has()` e miram **papel**, não
+posição — "legenda", "controle", "conteúdo" — então reordenar a página não os
+quebra.
+
 Densidade segue a prioridade, não a simetria, e a prioridade aqui é uma só: o
 topo é **um** número em Display com os dois veredictos pendurados nele, e todo
 o resto do recorte — pedidos, ticket médio, cupons, taxas — desce para duas
@@ -336,6 +365,21 @@ o tom sozinho não separa. Gráficos são transparentes sobre a página — o Pl
 não desenha superfície própria.
 
 ### Named Rules
+
+**A Regra do Papel do Espaço.** O intervalo entre dois blocos diz o que eles
+são um do outro, e por isso é escolhido pelo papel, nunca pela aparência: cola
+se andam juntos, base se são irmãos, solta se muda o assunto. Um valor novo
+fora dos três é sinal de que o papel não foi decidido.
+
+**A Regra da Legenda que Cola.** Legenda é a letra miúda do bloco acima, nunca
+um bloco novo — 8px, sempre. A única exceção documentada é o cabeçalho-extrato,
+onde as duas frases da sessão andam juntas e a letra miúda começa depois do
+vão de 28px.
+
+**A Regra do Controle que Pertence.** Um seletor de painel logo abaixo de um
+título é do título — é ele que escolhe o que a seção mostra. A 28px do título
+e 16px do gráfico, o controle lia como legenda do gráfico, que é o oposto do
+que ele faz.
 
 **A Regra do Tom, não da Sombra.** Elevação se expressa por camada de cor e fio
 de 1px. Nenhum elemento ganha `box-shadow` — nem em repouso, nem em hover. Se
@@ -568,6 +612,10 @@ parte de editar o arquivo.
   Streamlit (`st.logo`) fica vazio de propósito.
 - **Do** prefixar `.block-container` em regra de `<p>` própria, senão o
   `.stMarkdown p` do Streamlit ganha.
+- **Do** escolher o intervalo pelo papel — cola, base ou solta — e conferir no
+  render que nenhum valor fora dos três apareceu.
+- **Do** limitar o curso de um slider (30rem). Na largura inteira da coluna,
+  arrastar de 50% a 150% vira travessia e o controle lê como régua da seção.
 
 ### Don't:
 - **Don't** introduzir um quarto matiz de dado. Acima de três categorias,
@@ -607,3 +655,7 @@ parte de editar o arquivo.
   recorte de um ano inteiro corta em 375px.
 - **Don't** reativar o `st.logo`: a marca está na placa, e nos dois lugares ao
   mesmo tempo vira duas marcas na mesma tela.
+- **Don't** deixar o gap de 16px do Streamlit governar sozinho uma coluna
+  longa: sem os três degraus, legenda, controle e conteúdo saem no mesmo peso.
+- **Don't** estreitar um slider sem conferir o valor flutuante: ele é
+  posicionado acima da trilha e, com o curso curto, cai em cima do rótulo.

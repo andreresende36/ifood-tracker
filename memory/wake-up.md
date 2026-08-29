@@ -29,7 +29,8 @@ Nove commits, todos em `main` e no remoto:
 | `8b9f51e` · `9938f06` | Reflow de gráfico: tentado, removido, documentado |
 | `e59df2b` | Visão conjunta descartada, PRODUCT.md ajustado |
 | `924ce57` · `e833b24` | Chip de delta em verde; raios uniformizados |
-| (não commitado) | `/impeccable bolder`: cabeçalho-extrato no topo |
+| `5a1086f` | `/impeccable bolder`: cabeçalho-extrato e placa |
+| (não commitado) | `/impeccable layout`: escala de espaço de três degraus |
 
 ---
 
@@ -70,7 +71,23 @@ Verificado a 1440 e a 375, com filtro de abertura e com "Limpar filtros"
 (R$ 10.201,76, recorte "Nov/2025 – Ago/2026"). Detector limpo sobre o bloco
 `<style>` extraído.
 
-**3. Nada mais está pendente.** Não há backlog aberto.
+**3. A escala de espaço está no working tree, sem commit.** Rodada de
+`/impeccable layout`. O Streamlit empilha tudo com `gap: 16px` e a coluna não
+tinha cadência nenhuma fora do título de seção.
+
+- Três degraus com papel: cola 8px, base 16px, solta 28px. Abaixo de um título,
+  20px para o que pertence a ele e 28px para conteúdo novo.
+- Escritos como deltas de `margin-top` sobre os 16px, com seletores `:has()`
+  que miram papel (legenda, controle, conteúdo), não posição.
+- Slider limitado a 30rem, e o rótulo abre 1.25rem para o valor flutuante não
+  cair em cima dele.
+- `DESIGN.md`: a escala em Layout, mais as regras do Papel do Espaço, da
+  Legenda que Cola e do Controle que Pertence.
+
+Medido no render: todo intervalo da coluna caiu em 8, 16, 20 ou 28 — nenhum
+valor solto. Detector limpo (geral e `--scope layout`).
+
+**4. Nada mais está pendente.** Não há backlog aberto.
 
 ---
 

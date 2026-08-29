@@ -130,6 +130,90 @@ st.markdown("""
                                     color: #8b8f9a; margin: 0.7rem 0 0.4rem; }
     .block-container .ledger-casa b { color: #3fbf90; font-weight: 600; }
 
+    /* ── Escala de espaço ──────────────────────────────────────────────────
+       O Streamlit empilha tudo num flex column com `gap: 16px`, e o resultado
+       é uma coluna sem cadência: a nota de rodapé fica tão longe do número
+       quanto o número fica do próximo assunto. Só o título de seção tinha
+       ritmo próprio (2.5rem acima, 0.75rem abaixo); no resto da página havia
+       um valor de espaço só, e espaço igual é hierarquia nenhuma.
+
+       Três degraus, um papel para cada. O gap do framework não tem API, então
+       cada degrau é escrito como um delta de `margin-top` sobre os 16px:
+
+         cola   8px   (−8)   mesmo assunto: legenda e o que ela anota,
+                             dois controles do mesmo grupo
+         base  16px   ( 0)   irmãos comuns
+         solta 28px   (+12)  troca de sub-bloco dentro da seção
+
+       Abaixo de um título de seção os 0.75rem dele entram na conta: 20px para
+       o que pertence ao título (subtítulo, seletor de painel) e 28px para o
+       conteúdo que começa depois dele.
+
+       Os seletores miram papel, não posição — "legenda", "controle",
+       "conteúdo" — então reordenar a página não os quebra. */
+
+    /* cola: a legenda é a letra miúda do bloco acima, nunca um bloco novo. */
+    .block-container [data-testid="stVerticalBlock"]
+      > *:has([data-testid="stCaptionContainer"]) {
+        margin-top: -8px;
+    }
+    /* solta: o que vem depois de uma corrida de legendas começa assunto novo.
+       Título e fio ficam de fora — os dois já trazem o próprio espaço. */
+    .block-container [data-testid="stVerticalBlock"]
+      > *:has([data-testid="stCaptionContainer"])
+      + *:not(:has([data-testid="stCaptionContainer"])):not(:has([data-testid="stHeading"])):not(:has(hr)) {
+        margin-top: 12px;
+    }
+    /* cola: o seletor de painel pertence ao título da seção — é ele que
+       escolhe o que a seção mostra. A 28px do título e 16px do gráfico, o
+       controle lia como legenda do gráfico, que é o oposto do que ele faz. */
+    .block-container [data-testid="stVerticalBlock"] > *:has(> .stHeading)
+      + *:has([data-testid="stButtonGroup"]),
+    .block-container [data-testid="stVerticalBlock"] > *:has(> .stHeading)
+      + *:has([data-testid="stTextInput"]) {
+        margin-top: -8px;
+    }
+    /* cola: dois controles seguidos são um grupo de controle, não dois blocos. */
+    .block-container [data-testid="stVerticalBlock"]
+      > *:has([data-testid="stButtonGroup"]) + *:has([data-testid="stSlider"]),
+    .block-container [data-testid="stVerticalBlock"]
+      > *:has([data-testid="stTextInput"]) + *:has([data-testid="stSelectbox"]) {
+        margin-top: -8px;
+    }
+    /* solta: depois do grupo de controle vem o conteúdo que ele governa. */
+    .block-container [data-testid="stVerticalBlock"]
+      > *:has([data-testid="stSlider"]) + *:not(:has([data-testid="stCaptionContainer"])),
+    .block-container [data-testid="stVerticalBlock"]
+      > *:has([data-testid="stButtonGroup"]) + *:not(:has([data-testid="stSlider"])),
+    .block-container [data-testid="stVerticalBlock"]
+      > *:has([data-testid="stSelectbox"]) + *:has([data-testid="stDataFrame"]) {
+        margin-top: 12px;
+    }
+    /* Curso do slider: 11 paradas não precisam de 1280px. Na largura inteira
+       da coluna, arrastar de 50% a 150% vira uma travessia, e o controle lê
+       como régua da seção em vez de campo. 30rem é o mesmo teto do "top N". */
+    .block-container [data-testid="stSlider"] { max-width: 30rem; }
+    /* O valor flutuante do slider é posicionado ACIMA da trilha, e num curso
+       de 30rem ele cai em cima do rótulo — que na largura inteira ficava bem
+       à esquerda do polegar. O rótulo abre espaço para ele. */
+    .block-container [data-testid="stSlider"] [data-testid="stWidgetLabel"] {
+        margin-bottom: 1.25rem;
+    }
+
+    /* cola: os botões de exportar agem sobre a tabela logo acima. */
+    .block-container [data-testid="stVerticalBlock"]
+      > *:has([data-testid="stDataFrame"]):not(:has([data-testid="stExpander"])) + * {
+        margin-top: -8px;
+    }
+    /* O cabeçalho-extrato tem cadência própria: as duas frases que respondem
+       as perguntas da sessão andam juntas, e a letra miúda começa depois de um
+       vão. É o único lugar da página em que a legenda não anota a linha
+       imediatamente acima dela, então a regra geral é sobrescrita aqui —
+       depois dela, para ganhar no desempate. */
+    .block-container .stElementContainer:has(.ledger-casa) { margin-top: -8px; }
+    .block-container .stElementContainer:has(.ledger-casa)
+      + *:has([data-testid="stCaptionContainer"]) { margin-top: 12px; }
+
     /* Superfícies que o navegador desenha por padrão e não pertencem a
        design system nenhum — seleção, barra de rolagem e anel de foco. */
     ::selection { background: rgba(234, 29, 44, 0.32); }
