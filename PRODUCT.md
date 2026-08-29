@@ -9,7 +9,7 @@ web
 ## Users
 
 André e Carol, o casal, **juntos na mesma tela**. Sentam para olhar e alternam
-entre os dois perfis para comparar o gasto de cada um e o do casal. Não é um
+entre os dois perfis para ver o gasto de cada um, um de cada vez. Não é um
 painel administrativo com um dono e um convidado: os dois perfis são de
 primeira classe, e trocar de perfil é uso normal, não manutenção.
 
@@ -37,8 +37,8 @@ não as últimas páginas — e o cruza consigo mesmo: por hora do dia, por dia 
 semana, por restaurante, por prato, e contra uma estimativa de quanto o mesmo
 prato custaria feito em casa.
 
-Dois perfis lado a lado com bancos isolados é a outra metade: o gasto do casal
-é a soma de duas contas que o iFood nunca junta.
+Dois perfis com bancos isolados é a outra metade: cada conta tem o próprio
+histórico completo, e trocar de perfil é um gesto de uma tela.
 
 ## Operating Context
 
@@ -63,8 +63,12 @@ Restrições que trabalho futuro **não pode violar**:
 - **Nunca sai da máquina local.** Sem deploy remoto, sem nuvem. Isso já foi
   tentado (Railway) e foi exatamente o que quebrou o isolamento entre os
   perfis. É decisão, não limitação técnica.
-- **Perfis sempre isolados.** Um banco por pessoa. Pedido de um jamais pode
-  aparecer no outro — é propriedade de correção, não preferência.
+- **Perfis sempre isolados, inclusive na leitura.** Um banco por pessoa, e a
+  tela mostra **um perfil por vez**. Pedido de um jamais pode aparecer no outro
+  — é propriedade de correção, não preferência. Somar os dois numa visão
+  conjunta foi considerado e **descartado por decisão do André** (28/08/2026):
+  a soma exigiria ler os dois bancos no mesmo lugar, e o isolamento vale mais
+  do que o número agregado.
 - **Coleta sempre manual.** Sem agendamento, sem cron, sem coleta automática ao
   abrir. Roda quando alguém manda, com o Chrome à vista.
 
