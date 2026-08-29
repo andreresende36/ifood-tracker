@@ -29,6 +29,7 @@ Nove commits, todos em `main` e no remoto:
 | `8b9f51e` · `9938f06` | Reflow de gráfico: tentado, removido, documentado |
 | `e59df2b` | Visão conjunta descartada, PRODUCT.md ajustado |
 | `924ce57` · `e833b24` | Chip de delta em verde; raios uniformizados |
+| (não commitado) | `/impeccable bolder`: cabeçalho-extrato no topo |
 
 ---
 
@@ -47,7 +48,29 @@ Abra com `./run.sh`, role até um gráfico e **arraste a borda da janela**.
 Tudo foi medido com viewport emulada, que pode não disparar o `ResizeObserver`
 do Streamlit. Por isso a dúvida.
 
-**2. Nada mais está pendente.** Não há backlog aberto.
+**2. O cabeçalho-extrato está no working tree, sem commit.** Rodada de
+`/impeccable bolder` sobre a tela inteira. O movimento é um só: o degrau de
+Display deixou de servir ao nome da tela e passou a servir à quantia.
+
+- `show_month_signal`, `show_kpis` e `show_savings_line` viraram `ledger_head`.
+- O `h1` virou **placa**: wordmark de 38px ao lado do nome da tela em
+  `clamp(22px, 2.2vw + 12px, 28px)`. O `st.logo` saiu — a marca fica num
+  lugar só. A quantia ficou em `clamp(40px, 3.5vw, 50px)`/700/−0.025em
+  — meio termo pedido pelo André entre os 68px da primeira rodada e os 32px
+  da segunda.
+- Os três tiles de KPI viraram duas linhas de legenda; nenhum número sumiu.
+- `padding-top` do `.block-container` virou `calc(60px + 2.25rem)` — o
+  cabeçalho do Streamlit tem 60px e fica por cima; sem isso a placa entrava
+  debaixo dele.
+- `DESIGN.md`: componentes **Placa** e **Ledger Head** (este substitui Signal
+  Line e Savings Line); tokens de `display`, `section`, `page-top` e as regras
+  novas.
+
+Verificado a 1440 e a 375, com filtro de abertura e com "Limpar filtros"
+(R$ 10.201,76, recorte "Nov/2025 – Ago/2026"). Detector limpo sobre o bloco
+`<style>` extraído.
+
+**3. Nada mais está pendente.** Não há backlog aberto.
 
 ---
 
@@ -60,6 +83,10 @@ do Streamlit. Por isso a dúvida.
 - **Barra de otimismo: fica.** Foi trocada por uma faixa e o André mandou
   voltar. A faixa não volta.
 - **Quatro tiles na seção de cozinhar: ficam.** Mesma história.
+- **Os três tiles do topo viraram legenda** (28/08, no `bolder`). Não é a
+  mesma decisão dos quatro tiles da seção de cozinhar: aqueles continuam
+  tiles. Aqui o que substituiu os três foi um número em Display, não um
+  corte — pedidos e ticket médio seguem na tela, uma linha abaixo.
 - **Erros `<rect> negative width` no console: não são pendência.** O gatilho é
   container de largura zero (aba em segundo plano). Carga normal é limpa.
 - **Coleta manual, perfis isolados, tudo local.** As três restrições
@@ -73,6 +100,19 @@ do Streamlit. Por isso a dúvida.
 `[]` porque a extensão não está na lista de varríveis — vazio por construção,
 não limpo. Para ter sinal, extraia o bloco `<style>` para um `.html` e varra
 isso. O motor de URL exige `puppeteer`, que não está instalado.
+
+**Código morto pendente em `static/localize.html`.** O bloco que conserta o
+`alt="Logo"` do `st.logo` (linhas ~126-129) não casa com nada desde que a marca
+virou placa. Não foi apagado nesta sessão porque editar esse arquivo com o
+servidor no ar serve o conteúdo truncado e quebra o script inteiro — apague
+com o Streamlit parado.
+
+**O `.stMarkdown p` do Streamlit ganha de classe sozinha.** Regra de `<p>`
+própria precisa do prefixo `.block-container`, senão o tamanho não aplica e o
+sintoma é um texto no meio do caminho entre o degrau pedido e o default.
+
+**O cabeçalho do Streamlit tem 60px e fica POR CIMA do conteúdo.** Qualquer
+mexida no topo da página tem que descontar isso.
 
 **Editar `static/localize.html` exige reiniciar o Streamlit.** O servidor
 estático fixa o tamanho do arquivo no start: com o servidor no ar, ele serve o

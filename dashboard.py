@@ -4,6 +4,7 @@ iFood Order History Dashboard
 Run: streamlit run dashboard.py
 """
 
+import base64
 import hashlib
 import io
 import os
@@ -29,6 +30,13 @@ ASSETS = Path(__file__).parent / "assets"
 LOGO = ASSETS / "ifood-logo.png"      # wordmark aparado
 ICONE = ASSETS / "ifood-icon.png"     # símbolo vazado em tile — legível a 16px
 
+@st.cache_data
+def _logo_data_uri() -> str:
+    """O wordmark embutido: a pasta static/ serve o localize.html, e pendurar
+    a marca nela acrescentaria uma requisição e mais uma armadilha de cache."""
+    return "data:image/png;base64," + base64.b64encode(LOGO.read_bytes()).decode()
+
+
 st.set_page_config(
     page_title="iFood — Histórico de Pedidos",
     page_icon=str(ICONE) if ICONE.exists() else "🛵",
@@ -45,7 +53,11 @@ st.markdown("""
 <style>
     /* Ritmo: respiro generoso ANTES do título de seção e apertado depois dele,
        para o cabeçalho grudar no próprio conteúdo em vez de flutuar no meio. */
-    .block-container { padding-top: 2.25rem; }
+    /* 6rem e não 2.25rem: o cabeçalho do Streamlit tem 60px e fica POR CIMA
+       do conteúdo, então o respiro de 2.25rem do topo é o que sobra depois
+       dele. Enquanto o h1 carregava o padding de fábrica isso passava raspando;
+       com o h1 em placa, sem o padding, a primeira linha entrava debaixo dele. */
+    .block-container { padding-top: calc(60px + 2.25rem); }
     /* Seção é h2 e bloco é h3 — e o CSS mira os dois. Antes toda seção saía
        como h3 e herdava o ritmo de bloco: a regra de h2 nunca casava com
        nada na coluna de conteúdo, e o ritmo de seção era letra morta. */
@@ -61,6 +73,62 @@ st.markdown("""
     /* sem prefixo de tag: o rótulo é um <label>, não um <div> — com
        "div[...]" a regra nunca casava e rótulo e valor saíam no mesmo tom */
     [data-testid="stMetricLabel"] { opacity: 0.72; }
+
+    /* ── Cabeçalho-extrato ────────────────────────────────────────────────
+       O degrau de Display deixou de servir ao nome da tela e passou a servir
+       ao número. O logo já diz "iFood" e o h1 já dizia só qual tela é esta:
+       gastar 44px nele era gastar o topo da escala num rótulo. A quantia
+       ocupa o lugar — é o Metric Tile na escala de display, com a mesma
+       anatomia (rótulo a 72% sobre valor em 700 com tracking negativo, sem
+       moldura), grande o bastante para ser a primeira coisa lida. */
+    /* A placa: o wordmark ao lado do nome da tela, no degrau de Section. A
+       marca saiu do slot de logo do Streamlit — lá ela ficava sozinha num
+       canto acima da sidebar, e repetida ao lado do título viraria duas
+       marcas na mesma tela. */
+    .placa { display: flex; align-items: center; gap: 0.7rem; margin: 0 0 0.15rem; }
+    /* 38px contra um h1 de 28px: o wordmark é aparado sem margem, mas as
+       letras ocupam ~60% da caixa (o resto é o traço acima), então casar a
+       altura da imagem com a do texto deixa a marca menor do que ele. */
+    .placa img { height: 38px; width: auto; display: block; }
+    /* clamp no h1: em 375px "Histórico de pedidos" a 28px quebra em duas
+       linhas e a marca ao lado fica centrada contra o vão. A 22px cabe numa
+       linha só, e a placa continua sendo uma linha. */
+    .block-container .placa h1 { font-size: clamp(22px, 2.2vw + 12px, 28px);
+                                 font-weight: 600; letter-spacing: -0.14px;
+                                 padding: 0; margin: 0; }
+    .ledger { margin: 0.25rem 0 0; }
+    /* Prefixo .block-container em toda regra de <p>: o Streamlit estiliza
+       ".stMarkdown p" e ganha da classe sozinha — a linha do contrafactual
+       saía em 16px, no meio do caminho entre o degrau que pedia e o caption
+       de onde ela veio. */
+    .block-container .ledger-rotulo { font-size: 14px; line-height: 22.4px;
+                                      color: #e6e8ec; opacity: 0.72; margin: 0; }
+    /* O veredito encosta na quantia na mesma linha de base: é atributo do
+       número, não um parágrafo acima dele. No estreito a linha quebra e o
+       veredito desce inteiro. */
+    .ledger-linha { display: flex; flex-wrap: wrap; align-items: baseline;
+                    column-gap: 1.5rem; row-gap: 0.25rem; margin: 0.1rem 0 0; }
+    /* Figuras proporcionais: tabular-nums só onde há coluna para alinhar.
+       O clamp segura o piso: "R$ 10.201,76" a 50px não cabe em 375px. */
+    .ledger-valor { font-size: clamp(40px, 3.5vw, 50px); font-weight: 700;
+                    letter-spacing: -0.025em; line-height: 1.1; color: #e6e8ec;
+                    font-variant-numeric: proportional-nums; }
+    /* Texto corrido, não inline-flex: como flex, ao quebrar em duas linhas o
+       ícone e a ressalva viravam colunas e a frase se desmontava no estreito.
+       O ícone se alinha pelo baseline como qualquer glifo, e o respiro vai na
+       margem dele — num "gap" de flex ele caía também antes da vírgula
+       ("acima da média , dentro da faixa"). */
+    .ledger-veredito { font-size: 20px; font-weight: 600; letter-spacing: -0.1px; }
+    .ledger-icone { font-family: "Material Symbols Rounded"; font-size: 22px;
+                    line-height: 1; vertical-align: -4px; margin-right: 0.35rem; }
+    .ledger-ressalva { color: #8b8f9a; font-weight: 400; }
+    /* A pergunta que é a razão de ser do produto saía em caption de 14px, com
+       o mesmo peso da linha de cupons. Sobe para Headline; a cor fica só no
+       valor evitável. */
+    .block-container .ledger-casa { font-size: 20px; font-weight: 400;
+                                    letter-spacing: -0.1px; line-height: 1.4;
+                                    color: #8b8f9a; margin: 0.7rem 0 0.4rem; }
+    .block-container .ledger-casa b { color: #3fbf90; font-weight: 600; }
 
     /* Superfícies que o navegador desenha por padrão e não pertencem a
        design system nenhum — seleção, barra de rolagem e anel de foco. */
@@ -497,33 +565,6 @@ def _entregues(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     return ok, df[df["status"] != "Entregue"]
 
 
-def show_kpis(df: pd.DataFrame):
-    df, fora = _entregues(df)
-    total_spent    = df["total"].sum()
-    n_orders       = len(df)
-    avg_ticket     = df["total"].mean() if n_orders else 0
-    total_savings  = df["coupon_discount"].sum()
-    total_delivery = df["delivery_fee"].sum()
-    total_service  = df["service_fee"].sum()
-
-    # Os cinco não têm o mesmo peso. Cinco tiles iguais numa linha era default
-    # de framework — e, no espaço que sobra, truncava justamente o número
-    # ("R$ 18,1…"). Três primários com valor cheio; cupons e taxas são leitura
-    # de apoio e descem para uma linha discreta.
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Total gasto",  _brl(total_spent))
-    c2.metric("Pedidos",      f"{n_orders}")
-    c3.metric("Ticket médio", _brl(avg_ticket))
-    nota = (
-        f"Economizado em cupons **{_brl(total_savings, md=True)}**"
-        f"　·　Taxas de entrega e serviço **{_brl(total_delivery + total_service, md=True)}**"
-    )
-    if not fora.empty:
-        nota += (
-            f"　·　{len(fora)} pedido{'s' if len(fora) > 1 else ''} cancelado, recusado ou "
-            f"sem status somando {_brl(fora['total'].sum(), md=True)} ficaram fora do total"
-        )
-    st.caption(nota)
 
 
 # ── Sinal do mês ──────────────────────────────────────────────────────────────
@@ -621,49 +662,6 @@ def _veredito(s: dict) -> tuple[str, str, str, str]:
     return "trending_flat", INK_MUTE, "no mesmo patamar dos meses anteriores", ""
 
 
-def show_month_signal(orders_df: pd.DataFrame):
-    """
-    A primeira frase da tela responde "gastamos demais este mês?".
-
-    Não é cartão nem tile: é uma frase e a sua nota de rodapé. E não repete
-    nenhum número do bloco de KPIs logo abaixo — o que ele traz é a
-    comparação, não o total.
-    """
-    s = month_signal(orders_df)
-    if s is None:
-        return
-
-    nome = f"{MESES_EXTENSO[s['ref'].month]} de {s['ref'].year}"
-
-    if s["sem_base"]:
-        st.caption(
-            f"Ainda não dá para dizer se {nome} está caro: são precisos pelo menos "
-            f"{MIN_MESES_BASE} meses anteriores para formar uma média, e há {s['meses']}."
-        )
-        return
-
-    icone, cor, veredito, ressalva = _veredito(s)
-    st.markdown(
-        f'<p style="font-size:20px;font-weight:600;letter-spacing:-0.1px;margin:0 0 .25rem">'
-        f'<span style="font-family:Material Symbols Rounded;color:{cor};'
-        f'font-size:22px;line-height:1;vertical-align:-4px;margin-right:.4rem">{icone}</span>'
-        f'{nome} está <span style="color:{cor}">{veredito}</span>{ressalva}.</p>',
-        unsafe_allow_html=True,
-    )
-
-    ate = (f"até o dia {s['corte']}" if s["parcial"] else "no mês fechado")
-    # O sinal roda sobre o histórico inteiro e os KPIs logo abaixo rodam sobre
-    # o filtro. Sem dizer isso, limpar o filtro de mês deixa a frase falando de
-    # agosto ao lado de um total do ano inteiro, e a tela parece se contradizer.
-    nota = (
-        f"Média dos {s['meses']} meses anteriores {ate}: "
-        f"**{_brl(s['media'], md=True)}** · faixa de **{_brl(s['minimo'], md=True)}** a "
-        f"**{_brl(s['maximo'], md=True)}**"
-    )
-    if s["projecao"]:
-        nota += f"　·　No ritmo atual o mês fecha em **{_brl(s['projecao'], md=True)}** — estimativa"
-    nota += "　·　Comparação sobre o histórico completo, sem os filtros da barra lateral"
-    st.caption(nota)
 
 
 # ── Chart helpers ─────────────────────────────────────────────────────────────
@@ -1161,32 +1159,118 @@ def _economia_evitavel(df: pd.DataFrame, items_df: pd.DataFrame,
     return sav, total_saved, food_saved, fees, total_pago - total_saved, total_pago
 
 
-def show_savings_line(df: pd.DataFrame, items_df: pd.DataFrame):
-    """
-    A segunda pergunta da sessão — "dava para ter cozinhado?" — respondida no
-    topo, em uma frase.
 
-    A seção inteira fica onde está, com os gráficos e o prato a prato; o que
-    sobe é só o veredito, porque duas telas de rolagem é longe demais para a
-    pergunta que é a razão de ser do produto.
+
+def _periodo_label(df: pd.DataFrame) -> str:
+    """Nomeia o recorte que a quantia cobre, para o número não ficar solto."""
+    if "ordered_at" not in df or df.empty:
+        return ""
+    dt = pd.to_datetime(df["ordered_at"], errors="coerce").dropna()
+    if dt.empty:
+        return ""
+    ini, fim = dt.min(), dt.max()
+    if (ini.year, ini.month) == (fim.year, fim.month):
+        return f"{MESES_EXTENSO[fim.month]} de {fim.year}"
+    return (f"{MESES_EXTENSO[ini.month][:3]}/{ini.year} – "
+            f"{MESES_EXTENSO[fim.month][:3]}/{fim.year}")
+
+
+def ledger_head(orders_df: pd.DataFrame, df: pd.DataFrame, items_df: pd.DataFrame):
     """
-    if df.empty or items_df.empty:
-        return
-    _, total_saved, _, _, _, total_pago = _economia_evitavel(df, items_df, _escala_atual())
-    if total_pago <= 0:
-        return
-    pct = total_saved / total_pago * 100
-    # Caption puro deixaria o veredito do contrafactual com o mesmo peso da
-    # linha de cupons e taxas logo acima — a pergunta que é a razão de ser do
-    # produto lida como nota de rodapé. Fica em corpo de texto, com o valor em
-    # Economia: pesa mais que a legenda, menos que o sinal do mês.
+    O topo da tela é o número, não o nome da tela.
+
+    Um bloco só responde as duas perguntas com que a sessão começa — "gastamos
+    demais este mês?" e "dava para ter cozinhado?" — penduradas na quantia que
+    as motiva, em vez de três blocos empilhados no mesmo peso.
+
+    A hierarquia desce em degraus visíveis: quantia (display) → veredito e
+    contrafactual (20px) → o resto do recorte (14px). Antes os dois veredictos
+    saíam em caption, com o mesmo peso da linha de cupons.
+
+    O sinal do mês roda sobre o histórico INTEIRO e a quantia sobre o filtro
+    da barra lateral; a nota de rodapé declara isso, senão limpar o filtro de
+    mês deixa a frase falando de agosto ao lado de um total do ano.
+    """
+    entregues, fora = _entregues(df)
+    total  = entregues["total"].sum()
+    n      = len(entregues)
+    ticket = entregues["total"].mean() if n else 0
+
+    periodo = _periodo_label(entregues)
+    rotulo = "Total gasto" + (f" · {periodo}" if periodo else "")
+
+    s = month_signal(orders_df)
+    veredito_html = ""
+    ressalva = ""
+    if s and not s["sem_base"]:
+        icone, cor, veredito, ressalva = _veredito(s)
+        # A cor fica só no veredito; a ressalva vai junto, na mesma linha, em
+        # tinta de leitura e peso normal. Pintar a frase inteira faz o vermelho
+        # parar de significar alguma coisa — e tirar a ressalva daqui perde
+        # justamente a frase mais forte que a tela sabe dizer.
+        veredito_html = (
+            f'<span class="ledger-veredito" style="color:{cor}">'
+            f'<span class="ledger-icone">{icone}</span>{veredito}'
+            f'<span class="ledger-ressalva">{ressalva}</span></span>'
+        )
+
     st.markdown(
-        f'<p style="font-size:14px;line-height:22.4px;color:{INK_MUTE};margin:.35rem 0 0">'
-        f'Desse total, <span style="color:{ECONOMIA_TEXTO};font-weight:600">'
-        f'cerca de {_brl(total_saved, 0)} era evitável</span> — {pct:.0f}% do que '
-        f'foi pago, cozinhando em casa. Estimativa; a conta está logo abaixo.</p>',
+        f'<div class="ledger">'
+        f'<p class="ledger-rotulo">{rotulo}</p>'
+        f'<div class="ledger-linha">'
+        f'<span class="ledger-valor">{_brl(total)}</span>{veredito_html}'
+        f'</div></div>',
         unsafe_allow_html=True,
     )
+
+    if n and not items_df.empty:
+        _, total_saved, _, _, _, total_pago = _economia_evitavel(df, items_df, _escala_atual())
+        if total_pago > 0:
+            pct = total_saved / total_pago * 100
+            st.markdown(
+                f'<p class="ledger-casa">Cerca de <b>{_brl(total_saved, 0)}</b> disso '
+                f'era evitável cozinhando em casa — {pct:.0f}% do que foi pago. '
+                f'Estimativa; a conta está logo abaixo.</p>',
+                unsafe_allow_html=True,
+            )
+
+    # Duas notas, e não uma: a primeira é o recorte filtrado, a segunda é o
+    # histórico completo. Emendadas numa linha só, os dois escopos viram um.
+    plural = "s" if n != 1 else ""
+    recorte = (
+        f"**{n}** pedido{plural} entregue{plural}"
+        f"　·　Ticket médio **{_brl(ticket, md=True)}**"
+        f"　·　Economizado em cupons **{_brl(entregues['coupon_discount'].sum(), md=True)}**"
+        f"　·　Taxas de entrega e serviço "
+        f"**{_brl(entregues['delivery_fee'].sum() + entregues['service_fee'].sum(), md=True)}**"
+    )
+    if not fora.empty:
+        recorte += (
+            f"　·　{len(fora)} pedido{'s' if len(fora) > 1 else ''} cancelado, recusado ou "
+            f"sem status somando {_brl(fora['total'].sum(), md=True)} ficaram fora do total"
+        )
+    st.caption(recorte)
+
+    if s is None:
+        return
+    nome = f"{MESES_EXTENSO[s['ref'].month]} de {s['ref'].year}"
+    if s["sem_base"]:
+        st.caption(
+            f"Ainda não dá para dizer se {nome} está caro: são precisos pelo menos "
+            f"{MIN_MESES_BASE} meses anteriores para formar uma média, e há {s['meses']}."
+        )
+        return
+
+    ate = f"até o dia {s['corte']}" if s["parcial"] else "no mês fechado"
+    nota = (
+        f"Média dos {s['meses']} meses anteriores {ate}: "
+        f"**{_brl(s['media'], md=True)}** · faixa de **{_brl(s['minimo'], md=True)}** a "
+        f"**{_brl(s['maximo'], md=True)}**"
+    )
+    if s["projecao"]:
+        nota += f"　·　No ritmo atual o mês fecha em **{_brl(s['projecao'], md=True)}** — estimativa"
+    nota += "　·　Comparação sobre o histórico completo, sem os filtros da barra lateral"
+    st.caption(nota)
 
 
 def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
@@ -1629,14 +1713,21 @@ def orders_table(df: pd.DataFrame):
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    # A marca vive no slot de logo do Streamlit (canto superior esquerdo, fica
-    # acima da sidebar). Com o wordmark ali, repetir "iFood" no h1 seria dizer
-    # a mesma coisa duas vezes — o título passa a nomear só a tela.
+    # A marca fica ao lado do nome da tela, não no slot de logo do Streamlit:
+    # lá ela mora num canto acima da sidebar, longe do título, e nas duas
+    # posições ao mesmo tempo seriam duas marcas na mesma tela.
+    #
+    # O h1 é escrito à mão porque st.title não aceita nada ao lado; o alt sai
+    # de verdade aqui, sem depender do conserto que o localize.html fazia no
+    # alt="Logo" genérico do st.logo.
     if LOGO.exists():
-        # st.logo não aceita alt (1.58): o alt="Logo" vem do Streamlit e o
-        # localize.html troca por um nome de verdade, junto do resto do ARIA.
-        st.logo(str(LOGO), icon_image=str(ICONE), size="large")
-    st.title("Histórico de pedidos")
+        st.markdown(
+            f'<div class="placa"><img src="{_logo_data_uri()}" '
+            f'alt="iFood"><h1>Histórico de pedidos</h1></div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.title("Histórico de pedidos")
     _localize_widgets()  # idioma, ARIA, estado do seletor, marco e atalho
 
     # Seletor de perfil (pessoa) — bancos isolados, sem misturar pedidos
@@ -1719,9 +1810,7 @@ def main():
     # histórico INTEIRO (orders_df, não filtered) — dentro do recorte do
     # próprio mês ela não tem resposta. A segunda é o veredito da seção que
     # vem logo abaixo, que sozinha ficava a duas telas de rolagem.
-    show_month_signal(orders_df)
-    show_kpis(filtered)
-    show_savings_line(filtered, filtered_items)
+    ledger_head(orders_df, filtered, filtered_items)
 
     st.divider()
 

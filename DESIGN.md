@@ -23,10 +23,10 @@ colors:
 typography:
   display:
     fontFamily: "Source Sans, system-ui, -apple-system, sans-serif"
-    fontSize: "44px"
+    fontSize: "clamp(40px, 3.5vw, 50px)"
     fontWeight: 700
-    lineHeight: "52.8px"
-    letterSpacing: "normal"
+    lineHeight: "1.1"
+    letterSpacing: "-0.025em"
   section:
     fontFamily: "Source Sans, system-ui, -apple-system, sans-serif"
     fontSize: "28px"
@@ -78,7 +78,7 @@ spacing:
   section-below: "0.75rem"
   block-above: "1.75rem"
   block-below: "0.5rem"
-  page-top: "2.25rem"
+  page-top: "calc(60px + 2.25rem)"
 components:
   button-primary:
     backgroundColor: "{colors.dinheiro-acao}"
@@ -100,6 +100,10 @@ components:
     backgroundColor: "{colors.surface-base}"
     textColor: "{colors.ink-primary}"
     typography: "{typography.metric}"
+  ledger-head:
+    backgroundColor: "{colors.surface-base}"
+    textColor: "{colors.ink-primary}"
+    typography: "{typography.display}"
 ---
 
 # Design System: iFood Order Tracker
@@ -116,7 +120,7 @@ repetem o que o título já disse, e o cromo do navegador (seleção, rolagem,
 foco) é tingido para não parecer peça de outro sistema.
 
 O caráter é contido e preciso. A marca não aparece em blocos nem em faixas:
-ela vive no logo do canto, no anel de foco, no rastro da seleção de texto e na
+ela vive no wordmark da placa, no anel de foco, no rastro da seleção de texto e na
 única ação preenchida da tela. Os controles, por outro lado, se declaram —
 borda visível em cada campo, ação principal em vermelho cheio — porque este é
 um painel para agir, não para contemplar. A tensão é deliberada: superfícies
@@ -219,10 +223,19 @@ personalidade vem do peso e do tamanho, não da escolha de família: num painel
 de leitura, uma fonte que chama atenção para si rouba do número.
 
 ### Hierarchy
-- **Display** (700, 44px/52.8px): o título da tela, uma vez por página.
-- **Section** (600, 28px, −0.14px): título de seção na coluna de conteúdo
-  ("E se você tivesse cozinhado em casa?"). Sai como `h2`.
-- **Headline** (600, 20px/24px, −0.1px): título de seção da sidebar ("Filtros").
+- **Display** (700, `clamp(40px, 3.5vw, 50px)`, −0.025em): **a quantia**, uma
+  vez por página. O degrau já serviu ao nome da tela; hoje serve ao número,
+  porque o produto falha se o número não doer e o topo da escala não pode
+  estar num rótulo. O teto de 50px é deliberado: acima disso a quantia vira
+  cartaz e a placa some do lado dela. O piso de 40px também — `R$ 10.201,76`
+  a 50px não cabe em 375px, e número cortado é pior do que número menor.
+- **Section** (600, `clamp(22px, 2.2vw + 12px, 28px)`, −0.14px): título de
+  seção na coluna de conteúdo ("E se você tivesse cozinhado em casa?"), como
+  `h2`, e o `h1` da placa. O `clamp` existe pela placa: a 28px em 375px o nome
+  da tela quebra em duas linhas e o wordmark ao lado fica centrado contra o
+  vão.
+- **Headline** (600, 20px/24px, −0.1px): título de seção da sidebar
+  ("Filtros"), o veredito do mês e a linha do contrafactual.
 - **Title** (600, 18px/21.6px, −0.09px): título de bloco dentro da seção, `h3`.
   Degrau **reservado**: nenhuma seção usa hoje, e a regra existe para que o
   primeiro `st.subheader` dentro de uma seção caia na escala em vez do default
@@ -284,12 +297,19 @@ grupo de filtros governa tudo abaixo — nunca filtro dentro de card.
 Ritmo assimétrico e deliberado: 2.5rem acima de um título de seção contra
 0.75rem abaixo (1.75rem / 0.5rem no nível de bloco). O cabeçalho gruda no
 próprio conteúdo em vez de flutuar no meio do vão. O topo da página respira
-2.25rem.
+2.25rem — medidos **depois** do cabeçalho do Streamlit, que tem 60px e fica por
+cima do conteúdo; daí `calc(60px + 2.25rem)`, e não 2.25rem crus.
 
-Densidade segue a prioridade, não a simetria: três KPIs primários com valor
-cheio em colunas iguais, e as duas grandezas de apoio (cupons, taxas) descem
-para uma linha de legenda. Cinco tiles iguais numa linha é default de
-framework — e no espaço disponível truncava o próprio número.
+Densidade segue a prioridade, não a simetria, e a prioridade aqui é uma só: o
+topo é **um** número em Display com os dois veredictos pendurados nele, e todo
+o resto do recorte — pedidos, ticket médio, cupons, taxas — desce para duas
+linhas de legenda. Cinco tiles iguais numa linha era default de framework;
+três tiles iguais era a mesma democracia com menos itens, e nenhuma delas diz
+qual dos números é o que importa.
+
+A escala desce em degraus visíveis: quantia (Display) → veredito e
+contrafactual (Headline) → recorte (Body). Antes os dois veredictos saíam em
+legenda de 14px, com o mesmo peso da linha de cupons.
 
 Quatro seções, não seis. O topo — sinal do mês, KPIs, linha do contrafactual —
 responde as duas perguntas com que a sessão começa, e um único fio separa esse
@@ -381,34 +401,81 @@ Só o painel escolhido é construído, e o painel que **abre** é o primeiro com
 conteúdo no filtro corrente — não o primeiro da lista.
 
 ### Metric Tile
-O componente que carrega o propósito do produto. Sem caixa, sem borda, sem
-fundo: rótulo em 14px a 72% de opacidade sobre o valor em 700/26.4px com
-tracking −0.02em. A ausência de moldura é intencional — o número é a figura, e
-uma borda em volta o transformaria em cartão.
+A unidade de leitura de número, hoje nos quatro tiles da seção de cozinhar.
+Sem caixa, sem borda, sem fundo: rótulo em 14px a 72% de opacidade sobre o
+valor em 700/26.4px com tracking −0.02em. A ausência de moldura é intencional
+— o número é a figura, e uma borda em volta o transformaria em cartão.
 
-### Signal Line
-A primeira frase da tela, acima dos KPIs: responde "gastamos demais este mês?"
-antes que alguém precise ler um gráfico. Não é cartão nem tile — é uma frase em
-Headline com a sua nota de rodapé em Body recuado, sem fundo e sem moldura.
+O **Ledger Head** é este mesmo componente na escala de display; a anatomia é a
+mesma e a única diferença é o degrau de tipo.
 
-A cor fica **só no veredito** ("10% acima da média"): acima é Dinheiro, abaixo é
-Economia, e o patamar normal não recebe cor nenhuma — é o estado que não pede
-ação. A ressalva que vem depois ("dentro da faixa dos outros meses") sai em
-tinta de leitura; pintar a frase inteira faz o vermelho parar de significar
-alguma coisa.
+### Placa
+O wordmark e o nome da tela na mesma linha, no topo: `<img>` de 38px de altura
+ao lado de um `h1` no degrau de Section, alinhados pelo centro com 0.7rem de
+respiro.
 
-Ícone de tendência em Material Symbols, na cor do veredito, colado na frase.
-Nenhum número deste bloco se repete no bloco de KPIs logo abaixo — o que ele
-traz é a comparação, não o total.
+A marca **não** fica no slot de `st.logo`. Lá ela mora num canto acima da
+sidebar, longe do título e some quando a sidebar recolhe; nas duas posições ao
+mesmo tempo seriam duas marcas na mesma tela.
 
-### Savings Line
-A irmã da Signal Line, logo abaixo dos KPIs: responde a segunda pergunta da
-sessão — "dava para ter cozinhado?" — sem obrigar a rolar até a seção.
+38px de imagem contra um `h1` de 28px não é descompasso: o wordmark é aparado
+sem margem, mas as letras ocupam ~60% da caixa (o resto é o traço acima), então
+casar a altura da imagem com a do texto deixa a marca menor do que ele.
 
-O valor sai como "cerca de" e acompanha o controle de otimismo da seção.
-Corpo de texto em tinta recuada, com o valor evitável em Economia e peso 600:
-pesa mais que a legenda de cupons e taxas logo acima, menos que o sinal do mês
-logo abaixo do título. Diz que é estimativa e aponta para a conta completa.
+O `h1` é escrito à mão — `st.title` não aceita nada ao lado — e o `alt` sai de
+verdade daqui. O conserto que o `localize.html` fazia no `alt="Logo"` genérico
+do `st.logo` virou código morto: não casa com nada, e sai na próxima vez que o
+arquivo for editado com o servidor parado.
+
+O PNG vai embutido em `data:` URI. A pasta `static/` já serve o
+`localize.html` e pendurar a marca nela acrescentaria uma requisição e mais
+uma armadilha de cache.
+
+### Ledger Head
+O topo da tela, e o único lugar onde o degrau de Display aparece. Um bloco só
+responde as duas perguntas com que a sessão começa — "gastamos demais este
+mês?" e "dava para ter cozinhado?" — penduradas na quantia que as motiva, em
+vez de três blocos empilhados no mesmo peso.
+
+É o **Metric Tile na escala de display**: a mesma anatomia — rótulo em 14px a
+72% de opacidade sobre o valor em 700 com tracking negativo, sem caixa, sem
+borda, sem fundo — só que grande o bastante para ser a primeira coisa lida. O
+rótulo nomeia o recorte junto da grandeza ("Total gasto · Agosto de 2026"),
+para o número não ficar solto quando o filtro muda.
+
+**O veredito do mês** encosta na quantia na mesma linha de base: é atributo do
+número, não um parágrafo acima dele. Responde "gastamos demais este mês?" e a
+cor fica **só no veredito** ("16% acima da média") — acima é Dinheiro Texto,
+abaixo é Economia Texto, e o patamar normal não recebe cor nenhuma, que é o
+estado que não pede ação. A ressalva que vem depois ("dentro da faixa dos
+outros meses") sai em tinta recuada e peso normal: pintar a frase inteira faz
+o vermelho parar de significar alguma coisa, e tirar a ressalva daqui perde a
+frase mais forte que a tela sabe dizer ("e acima de todo mês anterior").
+
+O veredito é **texto corrido**, não `inline-flex`: como flex, ao quebrar em
+duas linhas o ícone e a ressalva viravam colunas e a frase se desmontava no
+estreito. O ícone de tendência é Material Symbols alinhado pelo baseline, e o
+respiro dele vai na própria margem — num `gap` de flex ele cai também antes da
+vírgula.
+
+**A linha do contrafactual** vem logo abaixo, em Headline de peso normal com o
+valor evitável em Economia Texto e peso 600. Responde a segunda pergunta sem
+obrigar a rolar até a seção; o valor sai como "cerca de", acompanha o controle
+de otimismo da seção e diz que é estimativa.
+
+Depois, duas legendas e não uma: a primeira é o recorte filtrado (pedidos,
+ticket médio, cupons, taxas, e o que ficou fora do total), a segunda é o
+histórico completo (média, faixa, projeção). Emendadas numa linha só, os dois
+escopos viram um — e o sinal roda sobre o histórico inteiro enquanto a quantia
+roda sobre o filtro.
+
+Nenhum número do bloco se repete abaixo: o que o veredito traz é a comparação,
+não o total.
+
+Toda regra de `<p>` do bloco vai prefixada por `.block-container`. O Streamlit
+estiliza `.stMarkdown p` e ganha da classe sozinha — sem o prefixo, a linha do
+contrafactual saía em 16px, no meio do caminho entre o degrau que pedia e a
+legenda de onde ela veio.
 
 ### Empty Panel
 O estado que a tela mais produz — o recorte de abertura é um mês só, e metade
@@ -496,6 +563,11 @@ parte de editar o arquivo.
   recorte de dias dos meses anteriores, nunca contra meses cheios.
 - **Do** manter o veredito das perguntas da sessão no topo, em uma frase cada,
   com a profundidade nas seções abaixo.
+- **Do** gastar o degrau de Display na quantia — um degrau acima da placa.
+- **Do** manter a marca num lugar só. Ela está na placa; o slot de logo do
+  Streamlit (`st.logo`) fica vazio de propósito.
+- **Do** prefixar `.block-container` em regra de `<p>` própria, senão o
+  `.stMarkdown p` do Streamlit ganha.
 
 ### Don't:
 - **Don't** introduzir um quarto matiz de dado. Acima de três categorias,
@@ -529,3 +601,9 @@ parte de editar o arquivo.
   Streamlit não reconhece o número como negativo, trata como alta e inverte a
   cor e a seta. O sinal ali é o hífen ASCII.
 - **Don't** deixar a barra de ferramentas do Plotly visível.
+- **Don't** montar a frase do veredito com `inline-flex`: ao quebrar em duas
+  linhas o ícone e a ressalva viram colunas.
+- **Don't** dar tamanho fixo à quantia: ela vai de três a seis dígitos, e o
+  recorte de um ano inteiro corta em 375px.
+- **Don't** reativar o `st.logo`: a marca está na placa, e nos dois lugares ao
+  mesmo tempo vira duas marcas na mesma tela.
