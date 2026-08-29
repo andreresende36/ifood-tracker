@@ -4,6 +4,7 @@ iFood Order History Dashboard
 Run: streamlit run dashboard.py
 """
 
+import base64
 import hashlib
 import io
 import os
@@ -27,6 +28,17 @@ from database import (
 
 ASSETS = Path(__file__).parent / "assets"
 STATIC = Path(__file__).parent / "static"
+
+# ── Modo nuvem ────────────────────────────────────────────────────────────────
+# A réplica hospedada é só leitura: ela não tem o Chrome nem a sessão logada
+# do iFood, então "Coletar" ali seria um botão que promete o que não pode
+# cumprir. A chave vem de st.secrets — no Streamlit Community Cloud ela é
+# configurada no painel do app, sem tocar em código; localmente não existe
+# secrets.toml, e o acesso cai no padrão local.
+try:
+    CLOUD_MODE = bool(st.secrets.get("cloud_mode", False))
+except Exception:
+    CLOUD_MODE = False
 # Nada de imagem embutida em `data:` URI: o markdown é reenviado pelo websocket
 # a CADA rerun, e o wordmark em base64 são 63 KB em toda mexida de filtro.
 # Servida de /app/static/, a imagem sai uma vez e o navegador guarda.
@@ -55,16 +67,41 @@ def _static_url(nome: str) -> str:
     return f"/app/static/{nome}?v={versao}"
 
 
-# ── Modo nuvem ────────────────────────────────────────────────────────────────
-# A réplica hospedada é só leitura: ela não tem o Chrome nem a sessão logada
-# do iFood, então "Coletar" ali seria um botão que promete o que não pode
-# cumprir. A chave vem de st.secrets — no Streamlit Community Cloud ela é
-# configurada no painel do app, sem tocar em código; localmente não existe
-# secrets.toml, e o acesso cai no padrão local.
-try:
-    CLOUD_MODE = bool(st.secrets.get("cloud_mode", False))
-except Exception:
-    CLOUD_MODE = False
+@st.cache_data(show_spinner=False)
+def _data_uri(nome: str) -> str:
+    """
+    O arquivo embutido em base64, para quando `/app/static/` não é confiável.
+
+    Só usado em CLOUD_MODE. Quando o app tem visualização restrita a e-mails
+    (Settings → Sharing), o Streamlit Community Cloud serve o app atrás de um
+    wrapper cujo roteador reserva `/app/` para si — `<img src="/app/static/
+    logo.webp">` bate no shell do Cloud, não no app, e devolve a página de
+    login em vez do arquivo (200, mas `Content-Type: text/html`, mesmo
+    tamanho para os dois arquivos: prova de que é a MESMA página de erro nos
+    dois casos). O `st.iframe` do localize.html escapa disso porque é
+    mecanismo nativo do Streamlit, que resolve esse prefixo sozinho; HTML cru
+    escrito à mão não tem esse privilégio.
+
+    O caminho certo seria descobrir o prefixo que o Streamlit usa (visto no
+    devtools: `/~/+/app/static/...`) e compô-lo — mas é rota interna, não
+    documentada, e pode mudar numa atualização da plataforma sem aviso.
+    `data:` URI não depende de prefixo nenhum: o byte já está no HTML.
+
+    O custo é local: o wordmark (5,6 KB) e a capa (176 KB) voltam a pesar no
+    markdown a cada rerun — só na réplica hospedada, que é usada de vez em
+    quando, não na sessão local de filtro atrás de filtro que motivou tirá-los
+    do embutido da primeira vez.
+    """
+    caminho = STATIC / nome
+    tipo = "image/webp" if caminho.suffix == ".webp" else "image/jpeg"
+    b64 = base64.b64encode(caminho.read_bytes()).decode()
+    return f"data:{tipo};base64,{b64}"
+
+
+def _imagem_src(nome: str) -> str:
+    """A fonte da imagem: embutida na nuvem, servida localmente."""
+    return _data_uri(nome) if CLOUD_MODE else _static_url(nome)
+
 
 
 st.set_page_config(
@@ -2629,7 +2666,7 @@ def main():
     # A capa vem antes de tudo, na largura inteira da coluna.
     if CAPA.exists():
         st.markdown(
-            f'<div class="capa"><img src="{_static_url(CAPA.name)}" '
+            f'<div class="capa"><img src="{_imagem_src(CAPA.name)}" '
             f'alt="Entregador do iFood numa moto, visto de trás, atravessando uma '
             f'avenida da cidade com a bolsa térmica nas costas">'
             f'</div>',
@@ -2645,7 +2682,7 @@ def main():
     # alt="Logo" genérico do st.logo.
     if LOGO.exists():
         st.markdown(
-            f'<div class="placa"><img src="{_static_url(LOGO.name)}" '
+            f'<div class="placa"><img src="{_imagem_src(LOGO.name)}" '
             f'alt="iFood"><h1>Histórico de pedidos</h1></div>',
             unsafe_allow_html=True,
         )

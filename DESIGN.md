@@ -621,13 +621,31 @@ O `h1` é escrito à mão — `st.title` não aceita nada ao lado — e o `alt` 
 verdade daqui, sem depender de conserto no DOM. O bloco que o `localize.html`
 mantinha para trocar o `alt="Logo"` genérico do `st.logo` foi removido junto.
 
-**Nenhuma imagem vai embutida.** Logo e capa saem os dois de `static/`,
-porque o markdown é reenviado pelo websocket a cada rerun: em `data:` URI o
-wordmark eram 63 KB em toda mexida de filtro, contra ~90 bytes de URL. O `?v=`
-com o hash do arquivo é a saída da armadilha de cache — `/app/static/` é
-servido com cache longo, e sem ele trocar a imagem não trocaria o que se vê.
-O hash é cacheado: ele lê o arquivo inteiro, e a capa eram 176 KB relidos e
-digeridos a cada rerun.
+**Nenhuma imagem vai embutida — localmente.** Logo e capa saem os dois de
+`static/`, porque o markdown é reenviado pelo websocket a cada rerun: em
+`data:` URI o wordmark eram 63 KB em toda mexida de filtro, contra ~90 bytes
+de URL. O `?v=` com o hash do arquivo é a saída da armadilha de cache —
+`/app/static/` é servido com cache longo, e sem ele trocar a imagem não
+trocaria o que se vê. O hash é cacheado: ele lê o arquivo inteiro, e a capa
+eram 176 KB relidos e digeridos a cada rerun.
+
+**Na réplica hospedada, as duas voltam a embutir (29/08/2026).** Quando o app
+tem visualização restrita a e-mails (Sharing → "Only specific people"), o
+Streamlit Community Cloud serve o app atrás de um wrapper cujo roteador
+reserva `/app/` para si mesmo. `<img src="/app/static/logo.webp">` bate no
+shell do Cloud, não no app — 200, `Content-Type: text/html`, o mesmo tamanho
+de resposta para os dois arquivos, prova de que é a MESMA página de erro nos
+dois casos. O `st.iframe` do `localize.html` escapa disso porque é mecanismo
+nativo do Streamlit, que resolve o prefixo sozinho (visto no devtools:
+`/~/+/app/static/...`); HTML cru escrito à mão não tem esse privilégio, e
+hardcodar esse prefixo seria depender de rota interna não documentada, que
+pode mudar numa atualização da plataforma sem aviso.
+
+`CLOUD_MODE` (`st.secrets["cloud_mode"]`) decide: local serve de `static/`
+como sempre; na nuvem, `_data_uri()` embute em base64, cacheado, e paga o peso
+do websocket a cada rerun. É um custo aceito de propósito — a réplica é usada
+de vez em quando, não na sessão local de filtro atrás de filtro que motivou
+tirar as imagens do embutido da primeira vez.
 
 **A versão servida é dimensionada para a tela.** O wordmark original tem
 2093px e aparece a 38px de altura — 55 vezes maior do que precisa. `static/`
