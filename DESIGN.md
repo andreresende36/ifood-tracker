@@ -652,11 +652,25 @@ vermelho, texto em Dinheiro Texto, peso 600, `aria-pressed` emitido pelo
 
 **Quando o menu volta.** O nome é editável em "Renomear este perfil" e nada
 impede trinta caracteres; aí o segmento trunca e o escolhedor passa a esconder
-justamente o que deveria mostrar. A regra mede antes de escolher a forma: no
-máximo três perfis **e** o nome mais longo cabendo na largura do segmento
-(`SIDEBAR_UTIL`, `SEG_VAO`, `SEG_PADDING`, `SEG_CHAR`, medidos no render). Fora
-disso, `st.selectbox`. O teto de três é do produto e não da largura: o
-PRODUCT.md define o público como um casal.
+justamente o que deveria mostrar. A regra mede antes de escolher a forma: a
+**soma** das larguras dos nomes mais os vãos tem que caber em `SIDEBAR_UTIL`.
+Somar e não dividir em partes iguais é o ponto — o segmento se dimensiona pelo
+próprio texto ("André" dá 70px e "Carolina" 83, não 130 cada), e dividir igual
+reprovava três nomes que cabem com folga. Hoje são três (André 70, Carolina 83,
+Casal 66, mais 16 de vão: 235 de 260). Fora disso, `st.selectbox`.
+
+**O terceiro segmento é o casal.** Ele lê os dois bancos, e é o único perfil
+que não é um banco: não coleta e não se renomeia. Na gaveta, "Coletar" e
+"Renomear" **somem** em vez de aparecerem cinzas — botão desabilitado ocupa
+espaço sem dizer o que fazer — e no lugar vai uma linha dizendo onde a ação
+mora ("a coleta é feita em cada pessoa").
+
+**Dentro do conjunto, nada perde o dono.** A tabela ganha a coluna **Pessoa**,
+a gaveta ganha o filtro por pessoa (primeiro da lista: "de quem" é o recorte
+mais grosso que existe), a busca livre passa a varrê-la, e o rótulo da quantia
+nomeia **quem o recorte contém**, não o perfil escolhido — filtrado em uma
+pessoa dentro do conjunto, a linha diz o nome dela e não "Casal". A soma sem
+procedência era exatamente o risco que a restrição antiga temia.
 
 **E o nome não fica só na gaveta.** O rótulo da quantia leva a pessoa —
 "Total gasto · André · Agosto de 2026". No celular a gaveta abre recolhida, e

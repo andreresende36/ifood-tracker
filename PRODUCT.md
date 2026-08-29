@@ -9,9 +9,9 @@ web
 ## Users
 
 André e Carol, o casal, **juntos na mesma tela**. Sentam para olhar e alternam
-entre os dois perfis para ver o gasto de cada um, um de cada vez. Não é um
-painel administrativo com um dono e um convidado: os dois perfis são de
-primeira classe, e trocar de perfil é uso normal, não manutenção.
+entre os perfis: o dela, o dele e o dos dois somados. Não é um painel
+administrativo com um dono e um convidado: os dois perfis são de primeira
+classe, e trocar de perfil é uso normal, não manutenção.
 
 Contexto de uso: máquina local do André, em casa, sessão deliberada — alguém
 abriu o terminal e rodou `./run.sh` porque quis olhar. Nunca é uma aba que
@@ -63,12 +63,23 @@ Restrições que trabalho futuro **não pode violar**:
 - **Nunca sai da máquina local.** Sem deploy remoto, sem nuvem. Isso já foi
   tentado (Railway) e foi exatamente o que quebrou o isolamento entre os
   perfis. É decisão, não limitação técnica.
-- **Perfis sempre isolados, inclusive na leitura.** Um banco por pessoa, e a
-  tela mostra **um perfil por vez**. Pedido de um jamais pode aparecer no outro
-  — é propriedade de correção, não preferência. Somar os dois numa visão
-  conjunta foi considerado e **descartado por decisão do André** (28/08/2026):
-  a soma exigiria ler os dois bancos no mesmo lugar, e o isolamento vale mais
-  do que o número agregado.
+- **Nenhum pedido muda de dono.** Um banco por pessoa, e cada pedido carrega
+  quem o fez em qualquer lugar que o mostre. Esta é a propriedade de correção,
+  e ela não se negocia.
+
+  **Revisão de 29/08/2026:** até aqui a regra era mais forte — "a tela mostra
+  um perfil por vez", e somar os dois tinha sido descartado em 28/08 porque
+  exigiria ler os dois bancos no mesmo lugar. O André pediu a soma, e a regra
+  foi reescrita para o que ela de fato protege: o risco nunca foi ler junto,
+  foi **atribuir errado**. O perfil conjunto lê os dois bancos, e por isso:
+  cada pedido leva a coluna **Pessoa**, existe filtro por pessoa dentro da
+  visão conjunta, o rótulo da quantia nomeia quem o recorte contém (e não o
+  perfil escolhido), e os `id` das duas bases são prefixados na leitura —
+  as duas numeram a partir de 1, e sem prefixo o pedido 7 de uma casaria com
+  os itens do pedido 7 da outra.
+
+  O conjunto **não é um banco**: não coleta e não se renomeia. Coletar
+  continua sendo um ato de uma pessoa.
 - **Coleta sempre manual.** Sem agendamento, sem cron, sem coleta automática ao
   abrir. Roda quando alguém manda, com o Chrome à vista.
 
@@ -99,7 +110,7 @@ Idioma: português do Brasil, em toda a interface.
 
 ## Evidence on Hand
 
-Dados reais, não amostra: 259 pedidos do André (nov/2025 a ago/2026) e 131 da
+Dados reais, não amostra: 260 pedidos do André (nov/2025 a ago/2026) e 131 da
 Carol, em `data/orders.db` e `data/carol.db`.
 
 **A economia é estimativa, não medição.** Os percentuais de "quanto sai mais

@@ -936,8 +936,15 @@ def _brl(valor: float, casas: int = 2, md: bool = False) -> str:
 # Sem ttl: o banco é um arquivo local que só muda quando alguém coleta, e tanto
 # "Coletar" quanto "Recarregar" chamam load_data.clear(). O ttl de 60s não
 # protegia de nada e criava uma janela em que "Recarregar" podia não recarregar.
+# O perfil conjunto não é um banco: é a leitura dos dois. A chave não pode
+# colidir com nome de arquivo em data/, daí os underscores.
+CASAL = "__casal__"
+
+
 @st.cache_data
 def load_data(profile: str = "default"):
+    if profile == CASAL:
+        return _load_casal()
     db = Database(profile=profile)
     if not db.db_path.exists():
         return pd.DataFrame(), pd.DataFrame()
@@ -946,6 +953,40 @@ def load_data(profile: str = "default"):
     items  = db.get_items_df()
     if not orders.empty and "status" in orders.columns:
         orders["status"] = orders["status"].map(_translate_status)
+    return orders, items
+
+
+def _load_casal():
+    """
+    Os dois bancos lidos juntos, com o dono de cada pedido preservado.
+
+    A restrição do produto nunca foi "não somar": é que **nenhum pedido mude
+    de dono**. Por isso a coluna `pessoa` nasce aqui, na leitura, e não é
+    opcional — sem ela a soma seria um número sem procedência, que é o que a
+    decisão de 28/08 temia.
+
+    Os `id` são prefixados pela chave do perfil porque as duas bases numeram a
+    partir de 1: sem isso o pedido 7 da Carol casaria com os itens do pedido 7
+    do André, e a tela mostraria o prato de um no gasto do outro. É o único
+    lugar do código onde um id vira texto, e é de propósito.
+    """
+    ordens, itens = [], []
+    for chave in [p for p in list_profiles() if p != CASAL]:
+        o, i = load_data(chave)
+        if o.empty:
+            continue
+        o = o.copy()
+        o["pessoa"] = profile_display_name(chave)
+        o["id"] = chave + "#" + o["id"].astype(str)
+        if not i.empty:
+            i = i.copy()
+            i["order_id"] = chave + "#" + i["order_id"].astype(str)
+            itens.append(i)
+        ordens.append(o)
+    if not ordens:
+        return pd.DataFrame(), pd.DataFrame()
+    orders = pd.concat(ordens, ignore_index=True)
+    items = pd.concat(itens, ignore_index=True) if itens else pd.DataFrame()
     return orders, items
 
 
@@ -958,7 +999,7 @@ def reload():
 
 FILTER_NAMES = [
     "flt_years", "flt_months", "flt_use_range", "flt_date_range",
-    "flt_cats", "flt_status", "flt_dow", "flt_pr", "flt_rest",
+    "flt_pessoa", "flt_cats", "flt_status", "flt_dow", "flt_pr", "flt_rest",
 ]
 
 
@@ -1066,6 +1107,18 @@ def sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
                 ]
 
     st.sidebar.divider()
+
+    # Pessoa — só existe no perfil conjunto, e vem primeiro: dentro da visão
+    # dos dois, "de quem" é o recorte mais grosso que existe, acima de
+    # categoria e de status.
+    if "pessoa" in df.columns:
+        pessoas = sorted(df["pessoa"].dropna().unique().tolist())
+        sel_pessoa = st.sidebar.multiselect(
+            "Pessoa", pessoas, placeholder="Os dois", key=k("flt_pessoa"),
+            default=_filter_default(k("flt_pessoa"), pessoas),
+        )
+        if sel_pessoa:
+            df = df[df["pessoa"].isin(sel_pessoa)]
 
     # Categoria (Restaurante / Mercado / Farmácia / …)
     if "category" in df.columns:
@@ -1818,6 +1871,16 @@ def ledger_head(orders_df: pd.DataFrame, df: pd.DataFrame, items_df: pd.DataFram
     n      = len(entregues)
     ticket = entregues["total"].mean() if n else 0
 
+    # No conjunto, quem o rótulo nomeia sai do DADO, não do perfil escolhido:
+    # com o filtro de pessoa em uma só, "Casal" ao lado de um total que é de
+    # uma pessoa é exatamente a troca de dono que o produto proíbe. O nome do
+    # perfil volta quando o recorte contém todo mundo que ele contém.
+    if "pessoa" in entregues.columns and not entregues.empty:
+        quem = sorted(entregues["pessoa"].dropna().unique().tolist())
+        todos = sorted(orders_df["pessoa"].dropna().unique().tolist())
+        if quem and quem != todos:
+            pessoa = " e ".join(quem)
+
     periodo = _periodo_label(entregues)
     # O nome entra no rótulo da quantia, e não só na gaveta: o dinheiro na
     # tela é de UMA pessoa por vez, e no celular a gaveta abre recolhida — sem
@@ -2293,6 +2356,8 @@ def orders_table(df: pd.DataFrame):
         return
 
     cols = ["ordered_at", "restaurant_name"]
+    if "pessoa" in df.columns:
+        cols.append("pessoa")
     if "category" in df.columns:
         cols.append("category")
     cols += [
@@ -2301,6 +2366,8 @@ def orders_table(df: pd.DataFrame):
     ]
     display = df[cols].copy()
     names = ["Data/hora", "Restaurante"]
+    if "pessoa" in df.columns:
+        names.append("Pessoa")
     if "category" in df.columns:
         names.append("Categoria")
     names += [
@@ -2309,14 +2376,19 @@ def orders_table(df: pd.DataFrame):
     ]
     display.columns = names
 
-    search = st.text_input("Buscar restaurante, categoria ou status", "")
+    # O rótulo promete exatamente as colunas que a busca varre — foi por
+    # prometer demais que "10" já casou com um valor de desconto.
+    campos_busca = ("restaurante, pessoa, categoria ou status"
+                    if "pessoa" in df.columns
+                    else "restaurante, categoria ou status")
+    search = st.text_input(f"Buscar {campos_busca}", "")
     if search:
         # regex=False: o nome do item traz "(", "+" e "*" o tempo todo, e um
         # parêntese solto derrubava a metade de baixo da tela com um traceback
         # do pyarrow no lugar da tabela e dos botões de export.
         # E só as colunas que o rótulo promete: o apply varria as 14, inclusive
         # as numéricas, então "10" casava com um valor de desconto.
-        alvos = [c for c in ("Restaurante", "Categoria", "Status") if c in display]
+        alvos = [c for c in ("Restaurante", "Pessoa", "Categoria", "Status") if c in display]
         # Rede de segurança: a busca é a única entrada de texto livre da tela e
         # já derrubou a metade de baixo uma vez. Se algo nela falhar, a tabela
         # continua de pé e quem digitou lê um aviso, não um traceback.
@@ -2335,7 +2407,7 @@ def orders_table(df: pd.DataFrame):
         else:
             if display.empty:
                 st.caption(
-                    f"Nenhum pedido com “{search}” no restaurante, categoria ou status."
+                    f"Nenhum pedido com “{search}” em {campos_busca}."
                 )
 
     # Ordenação num terço da largura: solto, o selectbox esticava por ~1200px
@@ -2378,44 +2450,108 @@ def orders_table(df: pd.DataFrame):
 # Largura útil da gaveta e custo de um segmento vazio (padding interno + o vão
 # entre segmentos), medidos no render a 1440px.
 SIDEBAR_UTIL = 260
-SEG_VAO, SEG_PADDING, SEG_CHAR = 8, 24, 7.2
+SEG_VAO, SEG_PADDING, SEG_CHAR = 8, 24, 8.0
 
 
 def _cabe_em_segmentos(nomes: list[str]) -> bool:
     """
     O escolhedor vira segmentado quando os nomes cabem lado a lado.
 
-    Trocar de pessoa é uso normal, não manutenção: com dois nomes à vista o
+    Trocar de pessoa é uso normal, não manutenção: com os nomes à vista o
     gesto é um só e ninguém precisa abrir um menu para descobrir que a outra
     pessoa existe. Mas o nome é editável em "Renomear este perfil", e nada
     impede alguém digitar trinta caracteres — aí o segmento trunca e o
     escolhedor passa a esconder justamente o que deveria mostrar. Quando não
     couber, o menu volta: é a forma que aguenta nome de qualquer tamanho.
 
-    O teto de três é do produto, não da largura: o PRODUCT.md define o público
-    como um casal. Um quarto perfil não é crescimento, é outro produto.
+    A conta **soma** as larguras em vez de dividir a barra em partes iguais,
+    porque o segmento se dimensiona pelo próprio texto: medido no render,
+    "André" dá 70px e "Carolina" 83, não 130 cada. Dividir igual reprovava
+    três nomes que cabem com folga.
     """
-    if not 1 < len(nomes) <= 3:
+    if len(nomes) < 2:
         return False
-    largura = (SIDEBAR_UTIL - SEG_VAO * (len(nomes) - 1)) / len(nomes)
-    return max(len(n) for n in nomes) * SEG_CHAR <= largura - SEG_PADDING
+    largura = sum(len(n) * SEG_CHAR + SEG_PADDING for n in nomes)
+    return largura + SEG_VAO * (len(nomes) - 1) <= SIDEBAR_UTIL
 
 
-AJUDA_PERFIL = "Cada perfil é uma pessoa, com banco de dados separado."
+AJUDA_PERFIL = ("Cada perfil é uma pessoa, com banco de dados separado. "
+                "O conjunto lê os dois, sem misturar de quem é cada pedido.")
+
+
+def _nome_do_perfil(chave: str) -> str:
+    """O conjunto não tem banco, então também não tem nome em profiles.json."""
+    return "Casal" if chave == CASAL else profile_display_name(chave)
+
+
+def _acoes_do_perfil(sel_profile: str, profiles: list[str]):
+    """
+    Coletar, recarregar e renomear — as ações que agem sobre UM banco.
+
+    No conjunto não há banco para coletar nem nome para renomear, e botão
+    cinza que não faz nada ocupa espaço sem dizer o que fazer. Sobra
+    "Recarregar", que relê os dois, e uma linha dizendo onde a coleta mora.
+    Coleta continua sendo um ato de uma pessoa, com o Chrome à vista.
+    """
+    if sel_profile == CASAL:
+        if st.sidebar.button(
+            "Recarregar", icon=":material/refresh:", width="stretch",
+            help="Relê os bancos locais, sem ir ao iFood.",
+        ):
+            reload()
+        pessoas = [_nome_do_perfil(p) for p in profiles if p != CASAL]
+        st.sidebar.caption(
+            "A coleta é feita em cada pessoa: escolha "
+            + " ou ".join(f"**{n}**" for n in pessoas)
+            + " para atualizar os pedidos dela."
+        )
+        return
+
+    # Botão de coletar/atualizar pedidos deste perfil (roda o scraper)
+    if st.sidebar.button(
+        "Coletar / atualizar pedidos",
+        icon=":material/download:",
+        width="stretch",
+        type="primary",
+        help="Roda o scraper para este perfil. Abre o Chrome; resolva o "
+             "captcha na janela se aparecer.",
+    ):
+        run_scraper(sel_profile)  # bloqueia, mostra status e dá rerun ao fim
+
+    # Mesma família da ação acima: atualizar os dados. Coletar busca no iFood;
+    # Recarregar só relê o banco (barato, sem abrir o Chrome).
+    if st.sidebar.button(
+        "Recarregar", icon=":material/refresh:", width="stretch",
+        help="Relê o banco local, sem ir ao iFood.",
+    ):
+        reload()
+
+    # Editor de nome de exibição (não renomeia arquivos/sessões)
+    with st.sidebar.expander("Renomear este perfil"):
+        new_name = st.text_input(
+            "Nome de exibição",
+            value=profile_display_name(sel_profile),
+            key=f"rename_{sel_profile}",
+        )
+        if st.button("Salvar nome", width="stretch"):
+            set_profile_display_name(sel_profile, new_name)
+            st.success("Nome atualizado!", icon=":material/check_circle:")
+            st.rerun()
+        st.caption(f"Banco: `{sel_profile}` (chave fixa, não muda)")
 
 
 def _seletor_de_perfil(profiles: list[str], index: int) -> str:
     """A pessoa cujo dinheiro a tela mostra. Segmentado quando cabe."""
-    nomes = [profile_display_name(p) for p in profiles]
+    nomes = [_nome_do_perfil(p) for p in profiles]
     if not _cabe_em_segmentos(nomes):
         return st.sidebar.selectbox(
             "Perfil", profiles, index=index,
-            format_func=profile_display_name, help=AJUDA_PERFIL,
+            format_func=_nome_do_perfil, help=AJUDA_PERFIL,
         )
     escolha = st.sidebar.segmented_control(
         "Perfil", profiles,
         default=profiles[index],
-        format_func=profile_display_name,
+        format_func=_nome_do_perfil,
         key="perfil_seg",
         help=AJUDA_PERFIL,
     )
@@ -2464,59 +2600,42 @@ def main():
         st.title("Histórico de pedidos")
     _localize_widgets()  # idioma, ARIA, estado do seletor, marco e atalho
 
-    # Seletor de perfil (pessoa) — bancos isolados, sem misturar pedidos
+    # Seletor de perfil — um banco por pessoa, mais a leitura conjunta
     profiles = list_profiles() or ["default"]
     # default sempre primeiro → abre por padrão ao iniciar o dashboard
     if "default" in profiles:
         profiles = ["default"] + [p for p in profiles if p != "default"]
+    # O conjunto vai por último, e só existe quando há o que somar. Ele nunca
+    # é o padrão de abertura: a sessão começa em quem abriu o painel.
+    if len(profiles) > 1:
+        profiles = profiles + [CASAL]
     # run.sh passa o perfil escolhido por aqui; sem ele, abre no primeiro
     initial = os.environ.get("IFOOD_PROFILE", "")
     index = profiles.index(initial) if initial in profiles else 0
     sel_profile = _seletor_de_perfil(profiles, index)
 
-    # Botão de coletar/atualizar pedidos deste perfil (roda o scraper)
-    if st.sidebar.button(
-        "Coletar / atualizar pedidos",
-        icon=":material/download:",
-        width="stretch",
-        type="primary",
-        help="Roda o scraper para este perfil. Abre o Chrome; resolva o "
-             "captcha na janela se aparecer.",
-    ):
-        run_scraper(sel_profile)  # bloqueia, mostra status e dá rerun ao fim
-
-    # Mesma família da ação acima: atualizar os dados. Coletar busca no iFood;
-    # Recarregar só relê o banco (barato, sem abrir o Chrome).
-    if st.sidebar.button(
-        "Recarregar", icon=":material/refresh:", width="stretch",
-        help="Relê o banco local, sem ir ao iFood.",
-    ):
-        reload()
-
-    # Editor de nome de exibição (não renomeia arquivos/sessões)
-    with st.sidebar.expander("Renomear este perfil"):
-        new_name = st.text_input(
-            "Nome de exibição",
-            value=profile_display_name(sel_profile),
-            key=f"rename_{sel_profile}",
-        )
-        if st.button("Salvar nome", width="stretch"):
-            set_profile_display_name(sel_profile, new_name)
-            st.success("Nome atualizado!", icon=":material/check_circle:")
-            st.rerun()
-        st.caption(f"Banco: `{sel_profile}` (chave fixa, não muda)")
+    _acoes_do_perfil(sel_profile, profiles)
 
     st.sidebar.divider()
 
     orders_df, items_df = load_data(sel_profile)
 
     if orders_df.empty:
-        st.warning(
-            f"Nenhum pedido no perfil **{sel_profile}**. "
-            "Clique em **Coletar / atualizar pedidos** na barra lateral "
-            f"ou rode `python scraper.py -p {sel_profile}`.",
-            icon=":material/inbox:",
-        )
+        # No conjunto não há o que coletar: o vazio ali significa que nenhuma
+        # das pessoas tem pedido, e a saída é coletar em cada uma.
+        if sel_profile == CASAL:
+            st.warning(
+                "Nenhum pedido em nenhuma das pessoas. Escolha uma delas na "
+                "barra lateral e clique em **Coletar / atualizar pedidos**.",
+                icon=":material/inbox:",
+            )
+        else:
+            st.warning(
+                f"Nenhum pedido no perfil **{_nome_do_perfil(sel_profile)}**. "
+                "Clique em **Coletar / atualizar pedidos** na barra lateral "
+                f"ou rode `python scraper.py -p {sel_profile}`.",
+                icon=":material/inbox:",
+            )
         if st.button("Recarregar", icon=":material/refresh:"):
             reload()
         return
@@ -2545,7 +2664,7 @@ def main():
     # anda. Juntos, arrastar o otimismo repinta só estes dois blocos — antes
     # repintava também os gráficos e a tabela, que o controle não toca.
     resumo_e_contrafactual(orders_df, filtered, filtered_items,
-                           profile_display_name(sel_profile))
+                           _nome_do_perfil(sel_profile))
     temporal_charts(filtered)
     restaurant_item_charts(filtered, filtered_items)
     orders_table(filtered)
