@@ -30,7 +30,9 @@ Nove commits, todos em `main` e no remoto:
 | `e59df2b` | Visão conjunta descartada, PRODUCT.md ajustado |
 | `924ce57` · `e833b24` | Chip de delta em verde; raios uniformizados |
 | `5a1086f` | `/impeccable bolder`: cabeçalho-extrato e placa |
-| (não commitado) | `/impeccable layout`: escala de espaço de três degraus |
+| `95e2a99` | `/impeccable layout`: escala de espaço de três degraus |
+| `ec48645` | remove o conserto morto do alt do st.logo |
+| (não commitado) | `/impeccable typeset`: medida de 72ch e compensação de escuro |
 
 ---
 
@@ -87,7 +89,85 @@ tinha cadência nenhuma fora do título de seção.
 Medido no render: todo intervalo da coluna caiu em 8, 16, 20 ou 28 — nenhum
 valor solto. Detector limpo (geral e `--scope layout`).
 
-**4. Nada mais está pendente.** Não há backlog aberto.
+**4. A tipografia está no working tree, sem commit.** Rodada de
+`/impeccable typeset`.
+
+- **Medida 72ch** na prosa da coluna. Media 166 caracteres por linha a 1440px
+  — mais que o dobro do confortável. É a maior correção da rodada.
+- **+0.01em** em tudo que é 14px: compensação de texto claro sobre fundo
+  quase preto, o eixo que faltava (entrelinha e peso já estavam).
+- **Entrelinha explícita** no veredito (1.4) e no valor do KPI (1.2). O 20px
+  tinha três entrelinhas diferentes na mesma tela.
+- **`R$\u00a0valor`** e separador `\u3000\u2060·\u3000`: com a medida curta a
+  quantia quebrava entre o cifrão e o número.
+
+Medido no render a 1440 (72ch) e a 375 (49ch), os dois dentro da faixa.
+Detector limpo, geral e `--scope type`.
+
+**5. Toda marca leva o seu valor** (mesma leva, sem commit). Pedido do André
+olhando o gráfico de economia por tipo de prato: o padrão de rótulo daquele
+gráfico vale para todos, qualquer que seja a grandeza.
+
+- O teto `MAX_ROTULOS = 8` saiu. Ele apagava o número justamente nos painéis
+  mais densos ("Top 15/30", "Por mês"), que são os que mais custam de ler no
+  eixo.
+- `_bar` e `_line` rotulam sozinhos a partir da série; `text=` sobra só para
+  quando o rótulo não é o valor. Formato pelo dtype: inteiro é contagem
+  (`1.234`), fracionário é dinheiro (`R$ 1.234`).
+- Corpo fixo em 11px com `constraintext="none"` e `cliponaxis=False`.
+- A rosca mostrava porcentagem só nas fatias ≥8%; agora toda fatia leva o
+  valor.
+- Heatmap já rotulava as células com pedido.
+
+`uniformtext` foi tentado e **não serve**: com `mode="show"` iguala todos pelo
+menor rótulo e a série inteira encolhia por causa de uma barra curta.
+
+Verificado com filtros limpos nos casos densos: 10 meses, 12 meses sazonais,
+top 15 horizontal, linha de ticket médio, rosca e 375px.
+
+**6. A cor dos estados** (mesma leva, sem commit). Rodada de
+`/impeccable colorize`. A tela parecia disciplinada porque eu nunca tinha visto
+um alerta — e eles aparecem o tempo todo, já que o recorte de abertura é um mês
+e metade dos painéis abre sem série.
+
+- `st.info/warning/error/success` saíam como **bloco preenchido de raio 0** em
+  quatro matizes de fora, incluindo o **amarelo** que a paleta mede e rejeita.
+  Agora herdam a anatomia da casa e a cor vem das três matizes: neutro para
+  "nada a mostrar", Dinheiro para "algo errado", Economia para "deu certo".
+- Outros achados fora da paleta, todos corrigidos: a tinta de fundo do chip de
+  delta (`rgba(61,213,109,.2)`), o chip de `código` em verde de sucesso, a
+  barra de hover da tabela, a caixa do checkbox, os ícones do multiselect, e
+  **dois cinzas de botão secundário** que faziam a escada de três superfícies
+  virar cinco.
+
+**Como medir isso de novo:** varredura no navegador comparando todo
+`color`/`backgroundColor` renderado contra a paleta. Antes: 11 valores de fora.
+Depois: **zero**. Metade só aparecia em hover ou em estado vazio — a olho, não
+se acha.
+
+**7. Movimento** (mesma leva, sem commit). Rodada de `/impeccable animate`.
+A tela não tinha movimento nenhum — toda transição do Streamlit vem com
+duração zero.
+
+- **Medido:** uma troca de painel leva ~985ms, e nesse intervalo a tela mostra
+  o painel anterior sem sinal nenhum além do spinner do canto.
+- Enquanto o rerun está em voo (gatilho: o `stStatusWidget` existir), a coluna
+  de conteúdo cai para 55%. A sidebar não — é onde está o controle na mão.
+- Assimetria: descer espera 220ms e leva 220ms; subir não espera e leva 160ms.
+- 120ms de cor em botão, chip e checkbox. Curva única
+  `cubic-bezier(0.16, 1, 0.3, 1)`.
+- Sem momento focal, por decisão: o Streamlit remonta tudo a cada rerun, então
+  animar entrada de conteúdo viraria coreografia a cada filtro.
+
+**Limitação da verificação:** com o painel do navegador ESCONDIDO o Chrome não
+avança transição nenhuma (`visibilityState: hidden`), então não dá para ver o
+efeito. O que dá para provar é o objeto `CSSTransition` que o browser criou —
+`getAnimations()` devolve prop, duração, atraso, curva e keyframes. Confirmado
+assim: ida 1→0.55 em 220ms com 220ms de atraso, volta em 160ms sem atraso,
+sidebar em 1. O *feel* continua não verificado; abra o painel e troque de
+painel de análise para julgar.
+
+**8. Nada mais está pendente.** Não há backlog aberto.
 
 ---
 
@@ -124,6 +204,11 @@ isso. O motor de URL exige `puppeteer`, que não está instalado.
 (6553, mesmo md5) — sem truncar. Um ponto só, e a favor: a pegadinha
 documentada abaixo custou uma sessão e fica onde está. Se for editar, o
 caminho seguro continua sendo com o Streamlit parado.
+
+**Medir com o painel do navegador escondido dá zero.** `innerWidth` volta 0,
+o `.block-container` mede 32px e todo `clamp` cai no piso — a tela parece
+quebrada e não está. Confira `innerWidth` antes de acreditar em qualquer
+medida. Foi o que aconteceu na primeira leitura desta rodada.
 
 **O `.stMarkdown p` do Streamlit ganha de classe sozinha.** Regra de `<p>`
 própria precisa do prefixo `.block-container`, senão o tamanho não aplica e o

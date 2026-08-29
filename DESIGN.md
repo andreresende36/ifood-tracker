@@ -37,7 +37,7 @@ typography:
     fontFamily: "Source Sans, system-ui, -apple-system, sans-serif"
     fontSize: "20px"
     fontWeight: 600
-    lineHeight: "24px"
+    lineHeight: "28px"
     letterSpacing: "-0.1px"
   title:
     fontFamily: "Source Sans, system-ui, -apple-system, sans-serif"
@@ -56,19 +56,25 @@ typography:
     fontSize: "14px"
     fontWeight: 400
     lineHeight: "22.4px"
-    letterSpacing: "normal"
+    letterSpacing: "0.01em"
+    maxWidth: "72ch"
   label:
     fontFamily: "Source Sans, system-ui, -apple-system, sans-serif"
     fontSize: "14px"
     fontWeight: 400
     lineHeight: "22.4px"
-    letterSpacing: "normal"
+    letterSpacing: "0.01em"
   icon:
     fontFamily: "Material Symbols Rounded"
     fontSize: "22px"
     fontWeight: 400
     lineHeight: "1"
     letterSpacing: "normal"
+motion:
+  feedback: "120ms"
+  estado: "220ms"
+  chegada: "160ms"
+  curva: "cubic-bezier(0.16, 1, 0.3, 1)"
 rounded:
   md: "8px"
   chrome-scrollbar: "6px"
@@ -100,6 +106,12 @@ components:
     backgroundColor: "{colors.surface-raised}"
     textColor: "{colors.ink-primary}"
     rounded: "{rounded.md}"
+  alert-state:
+    backgroundColor: "{colors.surface-raised}"
+    textColor: "{colors.ink-primary}"
+    rounded: "{rounded.md}"
+    borderColor: "{colors.border-hairline}"
+    typography: "{typography.body}"
   metric-tile:
     backgroundColor: "{colors.surface-base}"
     textColor: "{colors.ink-primary}"
@@ -213,6 +225,21 @@ A escolha é pelo papel, nunca pela aparência. O erro que essa tabela existe
 para evitar já foi cometido duas vezes aqui: primeiro texto em `#ea1d2c`
 (4,24:1), depois texto em `#c9101d` (3,22:1), cada um parecendo o certo.
 
+**A Regra do Estado.** Info, aviso, erro e sucesso **não ganham matiz
+própria**. Eles pegam emprestado das três que já existem, e a escolha é pelo
+que a mensagem diz, não pela convenção de cor do framework:
+
+| estado | cor | por quê |
+|---|---|---|
+| nada a mostrar | nenhuma | "não há dado" não é alarme nem grandeza; cor gasta aqui é cor que para de significar |
+| algo errado | Dinheiro Texto | os avisos desta tela são sobre a conta não fechar ou o dado não carregar — é do dinheiro que falam |
+| deu certo | Economia Texto | a mesma leitura do chip de delta: verde é o desfecho bom |
+
+A cor vive no **fio de 1px e no ícone**, nunca no preenchimento: o estado não
+pode ser a superfície mais forte da tela, que é da única ação preenchida. E
+não depende da cor — o Streamlit já emite `role="alert"` contra `role="status"`,
+e as chamadas coloridas levam ícone.
+
 **A Regra do Zero que Recua.** Em escala sequencial sobre fundo escuro, o passo
 do zero vai para perto da superfície, nunca para o claro. O contrário
 transforma uma matriz quase vazia num bloco branco gritando na tela.
@@ -238,21 +265,44 @@ de leitura, uma fonte que chama atenção para si rouba do número.
   `h2`, e o `h1` da placa. O `clamp` existe pela placa: a 28px em 375px o nome
   da tela quebra em duas linhas e o wordmark ao lado fica centrado contra o
   vão.
-- **Headline** (600, 20px/24px, −0.1px): título de seção da sidebar
-  ("Filtros"), o veredito do mês e a linha do contrafactual.
+- **Headline** (600, 20px/28px, −0.1px): título de seção da sidebar
+  ("Filtros"), o veredito do mês e a linha do contrafactual. A entrelinha é
+  1.4 e vai **explícita**: o veredito herdava 1.6 do corpo e ficava com
+  entrelinha diferente da linha do contrafactual, que tem o mesmo tamanho e
+  mora dois blocos abaixo.
 - **Title** (600, 18px/21.6px, −0.09px): título de bloco dentro da seção, `h3`.
   Degrau **reservado**: nenhuma seção usa hoje, e a regra existe para que o
   primeiro `st.subheader` dentro de uma seção caia na escala em vez do default
   do framework.
 - **Metric** (700, 26.4px, −0.02em): o valor do KPI. O tracking negativo
   aperta os dígitos para o número ler como uma unidade, não como uma fileira.
-- **Body** (400, 14px/22.4px): texto corrido, legendas, ajuda.
-- **Label** (400, 14px, opacidade 0.72): rótulo de KPI e de campo.
+- **Body** (400, 14px/22.4px, +0.01em, medida 72ch): texto corrido, legendas,
+  ajuda.
+- **Label** (400, 14px, +0.01em, opacidade 0.72): rótulo de KPI e de campo.
 - **Icon** (Material Symbols Rounded, 22px): o ícone é uma fonte, não tipo de
   leitura. É o mesmo conjunto que o Streamlit carrega para o parâmetro
   `icon=`; num trecho de HTML próprio, a família vai declarada à mão.
 
 ### Named Rules
+
+**A Regra da Medida.** Prosa da coluna de conteúdo tem teto de **72ch**. Numa
+coluna de 1140px o texto de 14px corria 166 caracteres por linha — mais que o
+dobro do que o olho volta a achar sozinho, e a única coisa que o leitor não
+podia consertar: fonte e cor estavam certas, e a legenda ainda era uma
+travessia.
+
+A medida vai em `ch`, não em pixels, porque ela é do texto e não do container:
+a linha de 20px fica fisicamente mais larga que a de 14px, e é isso mesmo —
+corpo maior carrega linha maior. O seletor pega só a prosa de primeiro nível
+(`> .stElementContainer > .stMarkdown`); rótulo de widget, título de gráfico e
+célula de tabela moram mais fundo e não têm medida a defender.
+
+**A Regra do Texto Claro.** Fonte clara sobre fundo quase preto sangra: o traço
+engorda e o miolo das letras fecha. A compensação é nos três eixos — entrelinha,
+tracking e peso. Este painel já tinha a entrelinha generosa (1.6 no corpo de
+14px) e o peso resolvido pelo par rótulo/valor, então o que faltava era o
+tracking: **+0.01em** em tudo que é 14px sobre a superfície escura. São 0,14px
+por letra — não se vê, se lê.
 
 **A Regra do Rótulo que Recua.** No par rótulo/valor, o rótulo vai a 72% de
 opacidade e o valor fica em 700. Se os dois saem no mesmo tom, o olho tem que
@@ -268,6 +318,12 @@ vírgula no decimal (`R$ 1.724,05`). Vale para texto, rótulo de barra, tick de
 eixo e hover: os três últimos são formatados pelo Plotly, que precisa de
 `separators=",."` no layout. O padrão do Python é o americano, e uma tela em
 português com `R$ 1,724.05` denuncia que ninguém olhou.
+
+O espaço entre o `R$` e o número é **inquebrável** (`\u00a0`). Com a medida em
+72ch a legenda quebrava entre os dois, e quantia partida em duas linhas não é
+quantia. Pelo mesmo motivo o separador dos runs de fato é
+`\u3000\u2060·\u3000`: o *word joiner* proíbe a quebra antes do marcador, para
+a linha nova começar com o próximo fato e não com o `·`.
 
 **A Regra do Dígito.** `tabular-nums` só onde números se alinham na vertical
 (tabela, ticks de eixo). No valor grande e solto do KPI, figuras
@@ -385,6 +441,13 @@ que ele faz.
 de 1px. Nenhum elemento ganha `box-shadow` — nem em repouso, nem em hover. Se
 dois blocos precisam se separar, o caminho é tom ou espaço, nunca profundidade
 simulada.
+
+**A Regra das Três Superfícies.** A escada tem **exatamente** três degraus, e o
+framework insiste em inventar no meio: o botão secundário saía em `#10151e` na
+sidebar e `#131720` no conteúdo, a caixa do checkbox em `#10151e` e a barra
+flutuante da tabela em `#131720` — quatro cinzas quase iguais que ninguém
+escolheu. Todo degrau novo é fixado no valor documentado. Cinco cinzas a um
+passo um do outro não são hierarquia; são ruído que ninguém consegue nomear.
 
 ## Shapes
 
@@ -520,6 +583,22 @@ estiliza `.stMarkdown p` e ganha da classe sozinha — sem o prefixo, a linha do
 contrafactual saía em 16px, no meio do caminho entre o degrau que pedia e a
 legenda de onde ela veio.
 
+### Alert State
+`st.info`, `st.warning`, `st.error` e `st.success` com a anatomia da casa:
+superfície elevada, fio de 1px, raio 8px, texto em tinta de leitura. A cor do
+estado fica no fio e no ícone, seguindo **A Regra do Estado**.
+
+De fábrica o Streamlit os entrega como **bloco preenchido de raio 0** em quatro
+matizes de outro sistema — um azul quase igual, mas não igual, ao de contagem;
+um **amarelo**, exatamente a quarta matiz que esta paleta mediu e rejeitou
+(ΔE 4.4 contra o vermelho para daltonismo); e um vermelho e um verde fora dos
+pares de texto validados. E não é um caso de canto: o recorte de abertura é um
+mês, metade dos painéis abre sem série, e cada um deles emite um `st.info`.
+
+O `st.info` é o **estado neutro** e é o mais comum da tela. Note que ele não
+substitui o **Empty Panel** — aquele é uma frase que diz o que há e para onde
+ir; o `st.info` é o aviso curto de um painel que não tem o que desenhar.
+
 ### Empty Panel
 O estado que a tela mais produz — o recorte de abertura é um mês só, e metade
 dos painéis não tem série para desenhar nele. Não é `st.info("Sem dados")`: é
@@ -538,13 +617,38 @@ uma, a mesma frase aparecia duas vezes lado a lado.
 Todo gráfico compartilha o mesmo cromo: fundo transparente, grade
 `{colors.chart-grid}`, eixo `{colors.chart-axis}`, texto `{colors.ink-muted}`,
 título em 15px `#e6e8ec`, e **nenhum título de eixo** — o título do gráfico já
-nomeia a grandeza. Rótulo direto na marca só até 8 marcas; acima disso, eixo e
-hover carregam o valor.
+nomeia a grandeza.
+
+**Toda marca leva o seu valor**, seja dinheiro, contagem ou quantidade: barra,
+ponto de linha, fatia de rosca e célula de heatmap com pedido. O rótulo é o
+padrão do helper, não um argumento que cada chamada precisa lembrar de passar —
+`_bar` e `_line` formatam sozinhos a partir da série, e `text=` só existe para
+quando o rótulo **não** é o valor.
+
+O formato sai do dtype: grandeza inteira é contagem (`1.234`), fracionária é
+dinheiro (`R$ 1.234`). Nesta base a regra é limpa — todo inteiro é contagem
+(pedidos, itens, quantidade) e todo fracionário é dinheiro (total, ticket,
+economia, custo em casa).
 
 Na barra horizontal o rótulo é `auto`, não `outside`: a maior barra empurra o
 número para fora da área de plotagem e ele sai recortado no estreito. Com
 `auto`, barra larga leva o número por dentro, em tinta da superfície; barra
 curta escreve do lado de fora, em tinta recuada.
+
+O corpo do rótulo é **fixo em 11px** e o Plotly é proibido de encolher
+(`constraintext="none"`). Sem isso ele espreme o número para caber dentro da
+barra, e a barra mais curta acaba definindo o corpo da série inteira. Com
+`auto` + `constraintext` livre, o número que não cabe dentro simplesmente sai
+para fora, no mesmo corpo.
+
+`cliponaxis=False` em toda marca rotulada: o rótulo da maior barra encosta na
+borda da área de plotagem e, sem isso, é recortado ali em vez de invadir a
+margem.
+
+**A alternativa que não serviu:** `uniformtext` com `mode="show"` iguala o
+corpo de todos os rótulos pelo **menor** deles, e a série inteira encolhia por
+causa de uma barra curta. `mode="hide"` é pior ainda — esconder rótulo é
+exatamente o comportamento que saiu daqui.
 
 A barra de ferramentas do Plotly não aparece (`displayModeBar: False`). Zoom e
 lasso não servem a um painel de agregados, e em 375px a barra pousa por cima do
@@ -585,6 +689,55 @@ visível), e o navegador guarda `/app/static/` com cache longo. Por isso a URL
 do iframe leva `?v=<hash do arquivo>` — e por isso reiniciar o Streamlit faz
 parte de editar o arquivo.
 
+## Motion
+
+**Não há momento focal, e isso é decisão.** É um painel local que alguém abre
+de propósito, e o Streamlit **remonta a página inteira a cada rerun** — uma
+entrada autoral viraria coreografia em toda mexida de filtro, que é
+exatamente o que um painel de operação não pode fazer. O movimento aqui tem
+dois trabalhos, os dois de feedback, e nenhum de expressão.
+
+Antes desta passagem a tela tinha movimento **nenhum**: toda transição que o
+Streamlit entrega vem com duração zero, e cada troca de estado era corte seco.
+
+### O que está obsoleto recua
+
+Uma troca de painel leva **~985ms medidos**, e nesse intervalo a tela mostrava
+o painel *anterior* como se fosse o atual. O único sinal era o spinner do
+framework no canto superior direito — longe de onde a pessoa acabou de clicar.
+
+Enquanto o servidor recalcula, a coluna de conteúdo cai para 55%. A **sidebar
+não recua**: é onde estão os controles que a pessoa está segurando, e apagar o
+próprio controle lê como app quebrado. Recua o que está velho; fica aceso o que
+está na mão.
+
+O gatilho é o `stStatusWidget`, que só existe no documento enquanto há rerun em
+voo — é o sinal que o próprio framework emite, e usá-lo evita inventar um
+estado paralelo que possa dessincronizar.
+
+A assimetria carrega o sentido: descer espera **220ms** antes de começar
+(rerun mais rápido que isso termina antes de a opacidade andar, e não pisca) e
+leva `{motion.estado}`; subir não espera nada e leva `{motion.chegada}`. Descer
+é um aviso que pode esperar, subir é o dado chegando.
+
+### O controle reconhece o clique
+
+`{motion.feedback}` de cor — fundo, fio e tinta — em botão, chip e caixa de
+seleção. O bastante para o estado não ser um corte, pouco o bastante para não
+virar latência.
+
+### Named Rules
+
+**A Regra da Curva Única.** Uma curva na tela inteira,
+`{motion.curva}` — desaceleração natural, sem repique. Bounce e elástico não
+entram: são voz, e a voz deste painel é o número.
+
+**A Regra do Movimento que Significa.** O sistema inteiro é opacidade e cor. O
+único deslocamento espacial da tela é o atalho de teclado, que entra deslizando
+de 8px acima — e é por isso que `prefers-reduced-motion` quase não muda nada
+aqui: só ele perde o transform. Se ligar a preferência mudasse muito, seria
+sinal de que havia movimento decorativo.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -615,18 +768,43 @@ parte de editar o arquivo.
   render que nenhum valor fora dos três apareceu.
 - **Do** limitar o curso de um slider (30rem). Na largura inteira da coluna,
   arrastar de 50% a 150% vira travessia e o controle lê como régua da seção.
+- **Do** medir a linha em caracteres no render, não a olho: a coluna larga do
+  `layout="wide"` deixa qualquer parágrafo passar de 150ch sem parecer errado.
+- **Do** medir quanto dura um rerun antes de decidir se ele precisa de
+  feedback. ~985ms pede; 100ms não.
+- **Do** atrasar o estado de espera. Sem atraso, todo rerun barato vira um
+  pisca.
+- **Do** varrer a tela inteira contra a paleta antes de dar cor por encerrada:
+  o que o framework desenha sozinho — estado, chip de `código`, caixa de
+  checkbox, barra de hover da tabela, ícone de multiselect — passou anos fora
+  da paleta sem ninguém ver, porque metade só aparece em hover ou em estado
+  vazio.
+- **Do** deixar o helper rotular. Passar `text=` à mão é o caminho de esquecer
+  num gráfico novo, e foi assim que metade dos painéis ficou sem número.
+- **Do** declarar `line-height` em todo papel de texto. O que fica em `normal`
+  herda coisa diferente em cada contexto e o mesmo corpo sai com duas
+  entrelinhas na mesma tela.
 
 ### Don't:
 - **Don't** introduzir um quarto matiz de dado. Acima de três categorias,
-  o formato muda (barra), não a paleta.
+  o formato muda (barra), não a paleta. Isso vale para **estado** também: a
+  matiz de aviso e de sucesso sai das três, não de uma quinta e uma sexta.
+- **Don't** animar a entrada de elementos do conteúdo. O Streamlit remonta
+  tudo a cada rerun, e uma animação de entrada dispararia na página inteira a
+  cada mexida de filtro.
+- **Don't** recuar a sidebar junto com o conteúdo durante um rerun: ali está o
+  controle que a pessoa está segurando.
+- **Don't** deixar um estado sair como bloco preenchido. A superfície mais
+  forte da tela é da única ação preenchida, não de um "sem dados".
 - **Don't** usar sombra em lugar nenhum. Separação é tom ou espaço.
 - **Don't** trocar `backgroundColor` do tema sem revalidar a paleta inteira —
   o contraste e a separação para daltonismo foram medidos contra `#0e1117`.
 - **Don't** pôr emoji no lugar de ícone.
 - **Don't** desenhar borda em volta de marca de dado; o respiro de 2px na cor
   da superfície faz esse trabalho.
-- **Don't** rotular toda barra de uma série longa nem toda fatia de uma rosca:
-  acima de 8 marcas, ou abaixo de 8% de uma fatia, o rótulo é recortado.
+- **Don't** deixar uma marca sem o seu valor. O teto de 8 rótulos que existia
+  aqui apagava o número justamente nos painéis mais densos — "Top 15/30", "Por
+  mês" —, que são os que mais custam para ler no eixo.
 - **Don't** deixar mais de uma ação preenchida em vermelho por tela.
 - **Don't** somar em dinheiro pedido que não foi entregue.
 - **Don't** pôr texto branco sobre `{colors.dinheiro}`: para fundo de texto o
@@ -658,3 +836,7 @@ parte de editar o arquivo.
   longa: sem os três degraus, legenda, controle e conteúdo saem no mesmo peso.
 - **Don't** estreitar um slider sem conferir o valor flutuante: ele é
   posicionado acima da trilha e, com o curso curto, cai em cima do rótulo.
+- **Don't** deixar a coluna inteira governar a medida do texto. Largura de
+  layout e largura de leitura são duas coisas.
+- **Don't** juntar `R$` e valor com espaço comum, nem separar fatos com espaço
+  que aceite quebra: a medida curta expõe os dois na hora.

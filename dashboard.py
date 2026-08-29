@@ -69,7 +69,7 @@ st.markdown("""
 
     /* O valor do KPI é o que se lê na varredura; o rótulo recua. */
     div[data-testid="stMetricValue"] > div { font-size: 1.65rem; font-weight: 700;
-                                             letter-spacing: -0.02em; }
+                                             letter-spacing: -0.02em; line-height: 1.2; }
     /* sem prefixo de tag: o rótulo é um <label>, não um <div> — com
        "div[...]" a regra nunca casava e rótulo e valor saíam no mesmo tom */
     [data-testid="stMetricLabel"] { opacity: 0.72; }
@@ -118,7 +118,11 @@ st.markdown("""
        O ícone se alinha pelo baseline como qualquer glifo, e o respiro vai na
        margem dele — num "gap" de flex ele caía também antes da vírgula
        ("acima da média , dentro da faixa"). */
-    .ledger-veredito { font-size: 20px; font-weight: 600; letter-spacing: -0.1px; }
+    /* line-height explícito: sem ele o veredito herdava 1.6 do corpo e ficava
+       com entrelinha diferente da linha do contrafactual, que é do mesmo
+       tamanho e mora dois blocos abaixo. Um corpo, uma entrelinha. */
+    .ledger-veredito { font-size: 20px; font-weight: 600; letter-spacing: -0.1px;
+                       line-height: 1.4; }
     .ledger-icone { font-family: "Material Symbols Rounded"; font-size: 22px;
                     line-height: 1; vertical-align: -4px; margin-right: 0.35rem; }
     .ledger-ressalva { color: #8b8f9a; font-weight: 400; }
@@ -214,6 +218,162 @@ st.markdown("""
     .block-container .stElementContainer:has(.ledger-casa)
       + *:has([data-testid="stCaptionContainer"]) { margin-top: 12px; }
 
+    /* ── Medida ────────────────────────────────────────────────────────────
+       Numa coluna de 1140px o texto de 14px corria 166 caracteres por linha —
+       mais que o dobro do que o olho volta a achar sozinho. A quebra de linha
+       é a única coisa que o leitor não podia consertar: fonte e cor estavam
+       certas, e ainda assim a legenda era uma travessia.
+
+       72ch, medido em caracteres e não em pixels, porque a medida é do texto,
+       não do container: a linha de 20px fica fisicamente mais larga que a de
+       14px, e é isso mesmo — corpo maior carrega linha maior.
+
+       O seletor pega só a prosa da coluna (`> .stElementContainer > .stMarkdown`).
+       Rótulo de widget, título de gráfico, célula de tabela e texto de botão
+       moram mais fundo e não têm medida a defender. */
+    .block-container [data-testid="stVerticalBlock"]
+      > .stElementContainer > .stMarkdown p {
+        max-width: 72ch;
+    }
+
+    /* ── Texto claro sobre superfície escura ───────────────────────────────
+       Fonte clara sobre fundo quase preto "sangra": o traço engorda e o miolo
+       das letras fecha. A compensação é nos três eixos, e a entrelinha deste
+       painel já era generosa (1.6), então falta o tracking. 0.01em em 14px é
+       0,14px por letra — não se vê, se lê. */
+    .block-container [data-testid="stCaptionContainer"] p,
+    .block-container [data-testid="stMetricLabel"],
+    .block-container [data-testid="stWidgetLabel"] p {
+        letter-spacing: 0.01em;
+    }
+
+    /* ── Estados semânticos ────────────────────────────────────────────────
+       O Streamlit pinta info/warning/error/success com quatro matizes que não
+       são deste sistema: um azul quase igual — mas não igual — ao de contagem,
+       um AMARELO (a quarta matiz que a paleta mediu e rejeitou, ΔE 4.4 contra
+       o vermelho para daltonismo), e um vermelho e um verde fora dos pares de
+       texto validados. Pior: os quatro saem como bloco preenchido de raio 0,
+       a superfície mais barulhenta da tela — mais forte que a única ação
+       preenchida que a página se permite. E eles aparecem o tempo todo: o
+       recorte de abertura é um mês, e metade dos painéis abre sem série.
+
+       Aqui o estado herda a anatomia da casa — superfície elevada, fio de 1px,
+       raio 8px, texto de leitura — e a cor fica no fio, vinda das três matizes
+       que já existem:
+
+         nada a mostrar  neutro. "Não há dado" não é alarme nem grandeza, e cor
+                         gasta aqui é cor que para de significar.
+         algo errado     Dinheiro. Os avisos desta tela são sobre a conta não
+                         fechar ou o dado não carregar — é do dinheiro que
+                         falam.
+         deu certo       Economia. A mesma leitura do chip de delta: verde é o
+                         desfecho bom.
+
+       O estado não depende da cor: o Streamlit já emite role="alert" para
+       aviso e erro contra role="status" para info e sucesso, e as chamadas que
+       carregam cor levam ícone. */
+    [data-testid="stAlertContainer"] {
+        /* o container ainda carregava a matiz do Streamlit no próprio `color`;
+           nada herda dela hoje, e é uma matiz de fora esperando herdeiro */
+        color: #e6e8ec;
+        background: #161b24;
+        border: 1px solid #242a35;
+        border-radius: 8px;
+    }
+    [data-testid^="stAlertContent"] { color: #e6e8ec; }
+    [data-testid="stAlertContainer"]:has([data-testid="stAlertContentWarning"]),
+    [data-testid="stAlertContainer"]:has([data-testid="stAlertContentError"]) {
+        border-color: #f0787f;
+    }
+    [data-testid="stAlertContainer"]:has([data-testid="stAlertContentSuccess"]) {
+        border-color: #3fbf90;
+    }
+    /* O ícone vem do parâmetro `icon=` e herda a cor do texto; aqui ele volta
+       para a cor do estado, que é o que ele está anunciando. */
+    [data-testid="stAlertContentWarning"] [data-testid="stAlertDynamicIcon"],
+    [data-testid="stAlertContentError"] [data-testid="stAlertDynamicIcon"] {
+        color: #f0787f;
+    }
+    [data-testid="stAlertContentSuccess"] [data-testid="stAlertDynamicIcon"] {
+        color: #3fbf90;
+    }
+
+    /* ── Movimento ─────────────────────────────────────────────────────────
+       A tela não tinha nenhum: toda transição do Streamlit vem com duração
+       zero, e cada troca de estado era um corte seco.
+
+       Não há momento focal aqui, e isso é decisão. É um painel local aberto de
+       propósito, e o Streamlit **remonta a página inteira a cada rerun** — uma
+       entrada autoral viraria coreografia em toda mexida de filtro, que é
+       exatamente o que um painel de operação não pode fazer. O movimento aqui
+       tem dois trabalhos, os dois de feedback.
+
+       **1. O que está obsoleto recua.** Uma troca de painel leva ~985ms
+       medidos, e durante esse tempo a tela mostrava o painel ANTERIOR como se
+       fosse o atual — o único sinal era um spinner no canto superior direito,
+       longe de onde a pessoa acabou de clicar. Enquanto o servidor recalcula,
+       a coluna de conteúdo cai para 55%.
+
+       A sidebar **não** recua: é onde estão os controles que a pessoa está
+       segurando, e apagar o próprio controle lê como app quebrado. Recua o que
+       está velho; fica aceso o que está na mão.
+
+       O atraso de 220ms na descida é o que impede o pisca-pisca: rerun mais
+       rápido que isso termina antes de a opacidade começar a andar. Na volta
+       não há atraso — a chegada é imediata.
+
+       **2. O controle reconhece o clique.** 120ms de cor, o bastante para o
+       estado não ser um corte e pouco o bastante para não virar latência.
+
+       Curva única, `cubic-bezier(0.16, 1, 0.3, 1)`: desaceleração natural,
+       sem repique. */
+    :root {
+        --mov-feedback: 120ms;
+        --mov-estado: 220ms;
+        --mov-curva: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* A volta é mais rápida que a ida e sem atraso nenhum: descer é um aviso
+       que pode esperar, subir é o dado chegando. O `0ms` vai explícito para a
+       assimetria não depender de sutileza de shorthand. */
+    [data-testid="stMain"] {
+        transition: opacity 160ms var(--mov-curva) 0ms;
+    }
+    /* O stStatusWidget só existe no documento enquanto há rerun em voo — é o
+       sinal de "trabalhando" que o próprio framework emite, e usá-lo evita
+       inventar um estado paralelo que possa dessincronizar. */
+    body:has([data-testid="stStatusWidget"]) [data-testid="stMain"] {
+        opacity: 0.55;
+        transition-duration: var(--mov-estado);
+        transition-delay: 220ms;
+    }
+
+    .block-container button, [data-testid="stSidebar"] button,
+    [data-baseweb="tag"], label[data-baseweb="checkbox"] > span:first-child {
+        transition: background-color var(--mov-feedback) var(--mov-curva),
+                    border-color var(--mov-feedback) var(--mov-curva),
+                    color var(--mov-feedback) var(--mov-curva);
+    }
+
+    /* O único movimento espacial da tela: o atalho de teclado entra deslizando
+       de 8px acima. Ele salta de -9999px (a técnica de esconder acessível não
+       muda), e o que anima é transform e opacidade. */
+    #pular-para-conteudo {
+        transform: translateY(-8px);
+        opacity: 0;
+        transition: transform var(--mov-estado) var(--mov-curva),
+                    opacity var(--mov-estado) var(--mov-curva);
+    }
+    #pular-para-conteudo:focus { transform: none; opacity: 1; }
+
+    /* Movimento reduzido tira o deslocamento e mantém o que significa. Como o
+       sistema inteiro é opacidade e cor, sobra só o atalho de teclado — e é
+       essa a prova de que aqui não há movimento decorativo: com a preferência
+       ligada, quase nada muda. */
+    @media (prefers-reduced-motion: reduce) {
+        #pular-para-conteudo { transform: none; }
+    }
+
     /* Superfícies que o navegador desenha por padrão e não pertencem a
        design system nenhum — seleção, barra de rolagem e anel de foco. */
     ::selection { background: rgba(234, 29, 44, 0.32); }
@@ -245,9 +405,31 @@ st.markdown("""
     [data-testid="stBaseButton-segmented_controlActive"] { color: #f0787f !important; }
     [data-testid="stBaseButton-segmented_controlActive"] p { font-weight: 600; }
 
-    /* O verde do delta do KPI é o do Streamlit; a paleta da casa tem o seu. */
+    /* O verde do delta do KPI é o do Streamlit; a paleta da casa tem o seu.
+       O texto e a seta já vinham corrigidos — a TINTA DE FUNDO do chip não, e
+       ela ainda era `rgba(61,213,109,.2)`, um verde de fora da paleta atrás de
+       um texto da paleta. */
     [data-testid="stMetricDelta"] svg { fill: #3fbf90; }
-    [data-testid="stMetricDelta"] { color: #3fbf90; }
+    [data-testid="stMetricDelta"] { color: #3fbf90;
+                                    background: rgba(25, 158, 112, 0.18); }
+
+    /* O chip de `código` saía no verde de sucesso do Streamlit (#5ce488) sobre
+       um cinza que não é dos três. Verde aqui significa o contrafactual — a
+       Regra do Papel vale para o cromo também, e um nome de arquivo não é
+       grandeza nenhuma. Fica em tinta de leitura sobre a superfície elevada. */
+    .block-container code, [data-testid="stSidebar"] code {
+        color: #e6e8ec;
+        background: #161b24;
+    }
+
+    /* A escada de elevação diz três superfícies e o render tinha cinco: o
+       botão secundário saía em #10151e na sidebar e #131720 no conteúdo, dois
+       cinzas quase iguais entre a base e a elevada, e nenhum dos dois é da
+       paleta. Um valor só, o documentado. */
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"],
+    .block-container button[data-testid="stBaseButton-secondary"] {
+        background-color: #161b24;
+    }
 
     /* O valor do slider flutua sobre a superfície, não sobre o polegar — em
        #c9101d dava 3,22:1 como texto. */
@@ -274,6 +456,18 @@ st.markdown("""
        e era a única sombra viva na tela inteira. */
     [data-testid="stElementToolbarButtonContainer"],
     [data-testid="stElementToolbar"] { box-shadow: none; }
+    /* A barra da tabela só aparece no hover, e por isso escapou de toda
+       revisão de cor até agora: superfície #131720 e ícones #fafafa, dois
+       valores que não são da paleta. Estado de hover também é estado. */
+    [data-testid="stElementToolbarButtonContainer"] { background: #161b24; }
+    [data-testid="stElementToolbar"] svg { color: #e6e8ec; }
+    /* Os ícones do multiselect (limpar tudo, abrir a lista) vinham em
+       rgba(250,250,250,.6) — um branco de fora da paleta atrás de opacidade.
+       Cromo que acompanha vai em tinta recuada, como o resto. */
+    [data-testid="stMultiSelect"] svg { color: #8b8f9a; }
+    /* A caixa do checkbox vinha em #10151e — o mesmo cinza intermediário que
+       saiu dos botões. */
+    label[data-baseweb="checkbox"] > span:first-child { background-color: #161b24; }
 
     /* Alvos de toque. O ✕ de um chip de filtro nasce com 8,8×8,8 e os ícones
        de "limpar tudo" com 21×21 — a área que a WCAG 2.5.8 (AA) exige é
@@ -376,8 +570,15 @@ HEAT_SCALE = [
     [0.55, "#256abf"], [0.80, "#3987e5"], [1.00, "#86b6ef"],
 ]
 
-# Acima de ~8 barras um número em cada uma vira ruído e começa a colidir.
-MAX_ROTULOS = 8
+# Toda marca leva o seu valor. O teto de 8 rótulos que existia aqui apagava o
+# número justamente nos painéis mais densos — "Top 15/30", "Por mês" — onde
+# ler no eixo custa mais.
+#
+# O corpo do rótulo é FIXO, e o Plotly é proibido de encolher (constraintext
+# "none"): com "auto", o número que não cabe dentro da barra sai para fora no
+# mesmo tamanho, em vez de espremer a série inteira até o pior caso. Foi por
+# isso que `uniformtext` não serviu aqui — ele iguala todos pelo menor.
+ROTULO_CORPO = 11
 
 # Tradução defensiva de status (caso o iFood retorne um valor não mapeado pelo scraper)
 STATUS_PT = {
@@ -426,7 +627,9 @@ def _brl(valor: float, casas: int = 2, md: bool = False) -> str:
     delimitador de LaTeX e o Streamlit engole o trecho entre eles.
     """
     corpo = f"{valor:,.{casas}f}".translate(str.maketrans({",": ".", ".": ","}))
-    return ("R\\$ " if md else "R$ ") + corpo
+    # \u00a0 e não espaço comum: com a medida em 72ch a legenda quebrava entre
+    # o "R$" e o número, e uma quantia partida em duas linhas não é quantia.
+    return ("R\\$\u00a0" if md else "R$\u00a0") + corpo
 
 
 # ── Data loading ──────────────────────────────────────────────────────────────
@@ -653,6 +856,11 @@ def _entregues(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 # ── Sinal do mês ──────────────────────────────────────────────────────────────
 
+# Separador dos runs de fato nas legendas. O U+2060 (word joiner) proíbe a
+# quebra entre o espaço da esquerda e o "·": sem ele, com a medida em 72ch, a
+# linha nova começava com o marcador em vez de com o próximo fato.
+SEP = "\u3000\u2060·\u3000"
+
 MESES_EXTENSO = [
     "", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
@@ -783,12 +991,29 @@ def _cromo(fig):
     return fig
 
 
-def _bar(df, x, y, title, color=DINHEIRO, text=None, xtype=None, orient=None):
-    # Rótulo só quando cabe: acima de MAX_ROTULOS barras o número em cada uma
-    # colide e é ilegível (era o caso dos "Top 15/30", que saíam recortados).
-    n = len(df)
-    if text is not None and n > MAX_ROTULOS:
-        text = None
+def _rotulos(valores, fmt: str = "auto"):
+    """
+    O texto que vai na marca.
+
+    "auto" decide pelo dtype, e nesta base a decisão é limpa: toda grandeza
+    inteira é contagem (pedidos, itens, quantidade) e toda grandeza fracionária
+    é dinheiro (total, ticket médio, economia, custo em casa). Contagem também
+    sai em formato brasileiro — `1.234`, não `1234` nem `1,234`.
+    """
+    if fmt == "auto":
+        fmt = "int" if pd.api.types.is_integer_dtype(valores) else "brl"
+    if fmt == "int":
+        return valores.map(lambda v: f"{int(v):,}".replace(",", "."))
+    return valores.map(lambda v: _brl(v, 0))
+
+
+def _bar(df, x, y, title, color=DINHEIRO, text=None, xtype=None, orient=None,
+         fmt="auto"):
+    # O rótulo é o padrão, não um extra que cada chamada precisa lembrar de
+    # passar: sem valor na marca, o gráfico manda o leitor ao eixo para toda
+    # leitura. `text=` continua aceito para quando o rótulo não é o valor.
+    if text is None:
+        text = _rotulos(df[x] if orient == "h" else df[y], fmt)
     fig = px.bar(df, x=x, y=y, title=title, template=PLOTLY_TEMPLATE,
                  text=text, orientation=orient)
     fig.update_traces(
@@ -802,8 +1027,14 @@ def _bar(df, x, y, title, color=DINHEIRO, text=None, xtype=None, orient=None):
         # número sai deitado dentro da barra. Travado na horizontal, ele vai
         # para fora quando não couber dentro.
         textangle=0,
-        textfont=dict(color=INK_MUTE),
-        insidetextfont=dict(color=SURFACE),
+        textfont=dict(color=INK_MUTE, size=ROTULO_CORPO),
+        insidetextfont=dict(color=SURFACE, size=ROTULO_CORPO),
+        # Sem isto o Plotly encolhe o número para caber dentro da barra, e a
+        # barra mais curta define o corpo de toda a série.
+        constraintext="none",
+        # O rótulo da maior barra encosta na borda da área de plotagem; sem
+        # isto ele é recortado ali em vez de invadir a margem.
+        cliponaxis=False,
         # 2px de respiro entre barras vizinhas em vez de borda desenhada
         marker_line_color=SURFACE, marker_line_width=2,
     )
@@ -848,10 +1079,16 @@ def _barra(alvo, df, x, y, title, color=DINHEIRO, text=None, **kw):
     )
 
 
-def _line(df, x, y, title):
-    fig = px.line(df, x=x, y=y, title=title, template=PLOTLY_TEMPLATE, markers=True)
+def _line(df, x, y, title, fmt="auto"):
+    fig = px.line(df, x=x, y=y, title=title, template=PLOTLY_TEMPLATE, markers=True,
+                  text=_rotulos(df[y], fmt))
     fig.update_traces(line_color=DINHEIRO, line_width=2,
-                      marker=dict(size=8, line=dict(color=SURFACE, width=2)))
+                      marker=dict(size=8, line=dict(color=SURFACE, width=2)),
+                      # acima do ponto: ao lado, o rótulo cavalga a própria
+                      # linha no trecho em que ela sobe.
+                      textposition="top center",
+                      textfont=dict(color=INK_MUTE, size=ROTULO_CORPO),
+                      cliponaxis=False)
     return _cromo(fig)
 
 
@@ -913,10 +1150,9 @@ def temporal_charts(df: pd.DataFrame):
             return
         c1, c2 = st.columns(2)
         _barra(c1, by_year, "year", "total", "Gasto por ano (R$)",
-               text=by_year["total"].apply(lambda v: _brl(v, 0)),
                xtype="category")
         _barra(c2, by_year, "year", "pedidos", "Pedidos por ano",
-               color=PEDIDOS, text=by_year["pedidos"], xtype="category")
+               color=PEDIDOS, xtype="category")
 
     elif aba == "Por mês":
         mode = st.radio("Visualização", ["Série histórica (mês/ano)", "Sazonal (Jan–Dez)"],
@@ -1078,12 +1314,11 @@ def _painel_faixa(df: pd.DataFrame):
     c1, c2 = st.columns(2)
     c1.plotly_chart(
         _bar(pr_data, "price_range", "pedidos", "Pedidos por faixa",
-             color=PEDIDOS, text=pr_data["pedidos"]),
+             color=PEDIDOS),
         width="stretch", config=PLOT_CONFIG,
     )
     c2.plotly_chart(
-        _bar(pr_data, "price_range", "total", "Gasto total por faixa (R$)",
-             text=pr_data["total"].apply(lambda v: _brl(v, 0))),
+        _bar(pr_data, "price_range", "total", "Gasto total por faixa (R$)"),
         width="stretch", config=PLOT_CONFIG,
     )
 
@@ -1323,14 +1558,14 @@ def ledger_head(orders_df: pd.DataFrame, df: pd.DataFrame, items_df: pd.DataFram
     plural = "s" if n != 1 else ""
     recorte = (
         f"**{n}** pedido{plural} entregue{plural}"
-        f"　·　Ticket médio **{_brl(ticket, md=True)}**"
-        f"　·　Economizado em cupons **{_brl(entregues['coupon_discount'].sum(), md=True)}**"
-        f"　·　Taxas de entrega e serviço "
+        f"{SEP}Ticket médio **{_brl(ticket, md=True)}**"
+        f"{SEP}Economizado em cupons **{_brl(entregues['coupon_discount'].sum(), md=True)}**"
+        f"{SEP}Taxas de entrega e serviço "
         f"**{_brl(entregues['delivery_fee'].sum() + entregues['service_fee'].sum(), md=True)}**"
     )
     if not fora.empty:
         recorte += (
-            f"　·　{len(fora)} pedido{'s' if len(fora) > 1 else ''} cancelado, recusado ou "
+            f"{SEP}{len(fora)} pedido{'s' if len(fora) > 1 else ''} cancelado, recusado ou "
             f"sem status somando {_brl(fora['total'].sum(), md=True)} ficaram fora do total"
         )
     st.caption(recorte)
@@ -1352,8 +1587,8 @@ def ledger_head(orders_df: pd.DataFrame, df: pd.DataFrame, items_df: pd.DataFram
         f"**{_brl(s['maximo'], md=True)}**"
     )
     if s["projecao"]:
-        nota += f"　·　No ritmo atual o mês fecha em **{_brl(s['projecao'], md=True)}** — estimativa"
-    nota += "　·　Comparação sobre o histórico completo, sem os filtros da barra lateral"
+        nota += f"{SEP}No ritmo atual o mês fecha em **{_brl(s['projecao'], md=True)}** — estimativa"
+    nota += SEP + "Comparação sobre o histórico completo, sem os filtros da barra lateral"
     st.caption(nota)
 
 
@@ -1418,7 +1653,7 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
     por_econ = by_cat.sort_values("economia")
     f1 = _bar(por_econ, "economia", "dish_cat",
               "Economia estimada por tipo de prato (R$)", color=ECONOMIA,
-              text=por_econ["economia"].apply(lambda v: _brl(v, 0)), orient="h")
+              orient="h")
     f1.update_layout(yaxis_title="")
     c1.plotly_chart(f1, width="stretch", config=PLOT_CONFIG)
 
@@ -1432,8 +1667,10 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
         text=comp["valor"].apply(lambda v: _brl(v, 0)),
         color="cenário", color_discrete_sequence=[DINHEIRO, ECONOMIA],
     )
-    fig2.update_traces(textposition="outside", textfont=dict(color=INK_MUTE),
-                       marker_line_color=SURFACE, marker_line_width=2)
+    fig2.update_traces(textposition="outside",
+                       textfont=dict(color=INK_MUTE, size=ROTULO_CORPO),
+                       marker_line_color=SURFACE, marker_line_width=2,
+                       cliponaxis=False, constraintext="none")
     fig2.update_layout(showlegend=False, xaxis_title="")
     c2.plotly_chart(_cromo(fig2), width="stretch", config=PLOT_CONFIG)
 
@@ -1501,13 +1738,12 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
                 return
             c1, c2 = st.columns(2)
             c1.plotly_chart(
-                _bar(by_cat, "category", "total", "Gasto por categoria (R$)",
-                     text=by_cat["total"].apply(lambda v: _brl(v, 0))),
+                _bar(by_cat, "category", "total", "Gasto por categoria (R$)"),
                 width="stretch", config=PLOT_CONFIG,
             )
             c2.plotly_chart(
                 _bar(by_cat, "category", "pedidos", "Nº de pedidos por categoria",
-                     color=PEDIDOS, text=by_cat["pedidos"]),
+                     color=PEDIDOS),
                 width="stretch", config=PLOT_CONFIG,
             )
 
@@ -1531,13 +1767,13 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
         # As cores estavam trocadas aqui: frequência (contagem) saía vermelha e
         # valor gasto saía azul — o inverso do resto do dashboard.
         f1 = _bar(by_rest.sort_values("pedidos"), "pedidos", "restaurant_name",
-                  "Por frequência", color=PEDIDOS, text="pedidos", orient="h")
+                  "Por frequência", color=PEDIDOS, orient="h")
         f1.update_layout(yaxis_title="")
         c1.plotly_chart(f1, width="stretch", config=PLOT_CONFIG)
 
         por_valor = by_rest.sort_values("total")
         f2 = _bar(por_valor, "total", "restaurant_name", "Por valor gasto (R$)",
-                  text=por_valor["total"].apply(lambda v: _brl(v, 0)), orient="h")
+                  orient="h")
         f2.update_layout(yaxis_title="")
         c2.plotly_chart(f2, width="stretch", config=PLOT_CONFIG)
 
@@ -1556,7 +1792,7 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
         # quantidade é contagem → azul, não vermelho
         fig = _bar(by_item.sort_values("total_qty"), "total_qty", "item_name",
                    f"Top {top_n_i} itens mais pedidos (quantidade)",
-                   color=PEDIDOS, text="total_qty", orient="h")
+                   color=PEDIDOS, orient="h")
         fig.update_layout(yaxis_title="")
         st.plotly_chart(fig, width="stretch", config=PLOT_CONFIG)
 
@@ -1603,12 +1839,11 @@ def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
                 marker=dict(colors=[DINHEIRO, PEDIDOS, ECONOMIA],
                             line=dict(color=SURFACE, width=2)),
                 hole=0.55,
-                # Rótulo só na fatia em que ele cabe. As taxas são ~2-4% cada:
-                # com label+valor por fora eles se sobrepunham, e por dentro
-                # não cabem na lasca. Ficam na legenda, no hover e no texto
-                # abaixo — nenhum valor depende só do tooltip.
-                text=[f"{v / sum(values):.0%}" if v / sum(values) >= 0.08 else ""
-                      for v in values],
+                # Toda fatia leva o seu valor, inclusive as lascas de 2-4%: a
+                # identidade continua vindo da legenda, e o número deixa de
+                # depender do hover. Valor e não porcentagem — a porcentagem
+                # está no hover e o produto é sobre quanto foi pago.
+                text=[_brl(v, 0) for v in values],
                 textinfo="text",
                 # Fora da fatia: dentro, o rótulo ficava em #0e1117 sobre o
                 # vermelho da marca — 4,24:1, abaixo do AA de texto. Fora, ele
@@ -1857,7 +2092,7 @@ def main():
         )
         if st.button("Salvar nome", width="stretch"):
             set_profile_display_name(sel_profile, new_name)
-            st.success("Nome atualizado!")
+            st.success("Nome atualizado!", icon=":material/check_circle:")
             st.rerun()
         st.caption(f"Banco: `{sel_profile}` (chave fixa, não muda)")
 
@@ -1869,7 +2104,8 @@ def main():
         st.warning(
             f"Nenhum pedido no perfil **{sel_profile}**. "
             "Clique em **Coletar / atualizar pedidos** na barra lateral "
-            f"ou rode `python scraper.py -p {sel_profile}`."
+            f"ou rode `python scraper.py -p {sel_profile}`.",
+            icon=":material/inbox:",
         )
         if st.button("Recarregar", icon=":material/refresh:"):
             reload()
@@ -1888,7 +2124,6 @@ def main():
     filtered_items = items_df[items_df["order_id"].isin(filtered["id"])] if not items_df.empty else pd.DataFrame()
 
     st.divider()
-
     # O topo responde as duas perguntas com que a sessão começa: "gastamos
     # demais este mês?" e "dava para ter cozinhado?". A primeira vem do
     # histórico INTEIRO (orders_df, não filtered) — dentro do recorte do
