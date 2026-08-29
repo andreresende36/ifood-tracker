@@ -4,7 +4,6 @@ iFood Order History Dashboard
 Run: streamlit run dashboard.py
 """
 
-import base64
 import hashlib
 import io
 import os
@@ -27,19 +26,33 @@ from database import (
 # ── Page config ───────────────────────────────────────────────────────────────
 
 ASSETS = Path(__file__).parent / "assets"
-LOGO = ASSETS / "ifood-logo.png"  # wordmark aparado
-# A capa mora em static/ e não em assets/, e não vai embutida como o logo: são
-# 117 KB, e o markdown é reenviado pelo websocket a CADA rerun. Embutida, seria
-# esse peso em toda mexida de filtro; servida, o navegador guarda a primeira e
-# não pede de novo.
-CAPA = Path(__file__).parent / "static" / "capa-avenida.jpg"
+STATIC = Path(__file__).parent / "static"
+# Nada de imagem embutida em `data:` URI: o markdown é reenviado pelo websocket
+# a CADA rerun, e o wordmark em base64 são 63 KB em toda mexida de filtro.
+# Servida de /app/static/, a imagem sai uma vez e o navegador guarda.
+#
+# O original de 2093px continua em assets/ (fonte da verdade); static/ leva a
+# versão servida, dimensionada para o tamanho de tela — o wordmark aparece a
+# 38px de altura, e 240px cobre 3x de DPR com folga. Regerar com:
+#   cwebp -q 90 -resize 240 0 assets/ifood-logo.png -o static/ifood-logo.webp
+LOGO = STATIC / "ifood-logo.webp"     # wordmark aparado, 5,6 KB
+CAPA = STATIC / "capa-avenida.jpg"
 ICONE = ASSETS / "ifood-icon.png"     # símbolo vazado em tile — legível a 16px
 
-@st.cache_data
-def _logo_data_uri() -> str:
-    """O wordmark embutido: a pasta static/ serve o localize.html, e pendurar
-    a marca nela acrescentaria uma requisição e mais uma armadilha de cache."""
-    return "data:image/png;base64," + base64.b64encode(LOGO.read_bytes()).decode()
+
+@st.cache_data(show_spinner=False)
+def _static_url(nome: str) -> str:
+    """
+    URL de um arquivo de static/ com `?v=` do conteúdo.
+
+    O `?v=` é a saída da armadilha de cache: /app/static/ é servido com cache
+    longo, e sem ele trocar a imagem não trocaria o que se vê. Cacheado porque
+    o hash exige ler o arquivo inteiro — a capa são 176 KB, e sem cache eles
+    eram lidos e digeridos de novo a cada rerun.
+    """
+    caminho = STATIC / nome
+    versao = hashlib.sha1(caminho.read_bytes()).hexdigest()[:8]
+    return f"/app/static/{nome}?v={versao}"
 
 
 st.set_page_config(
@@ -727,13 +740,12 @@ def _localize_widgets():
     # st.iframe recusa height=0 (o components.html antigo aceitava), então o
     # iframe vai com 1px dentro de um container escondido por CSS. display:none
     # não impede o iframe de carregar nem o script de rodar.
-    versao = ""
-    if LOCALIZE.exists():
-        versao = "?v=" + hashlib.sha1(LOCALIZE.read_bytes()).hexdigest()[:8]
+    if not LOCALIZE.exists():
+        return
     with st.container(key="localize_iframe"):
         # A barra inicial é obrigatória: sem ela o st.iframe não reconhece
         # como URL e embute o caminho como se fosse HTML cru.
-        st.iframe(f"/app/static/localize.html{versao}", height=1)
+        st.iframe(_static_url(LOCALIZE.name), height=1)
 
 PRICE_RANGE_ORDER = [
     "Até R$30", "R$30–50", "R$50–80", "R$80–120", "Acima de R$120", "Desconhecido"
@@ -1323,6 +1335,9 @@ def _abas(opcoes: list, key: str, default: str | None = None) -> str:
     return escolha or padrao  # segmented_control permite desmarcar → None
 
 
+# Fragmento: o seletor de painel e o modo de visualização não saem daqui.
+# Trocar de aba reexecutava a página inteira só para desenhar outro gráfico.
+@st.fragment
 def temporal_charts(df: pd.DataFrame):
     # "Quando e quanto" e não "Análise temporal": a faixa de valor entrou como
     # painel, e ela não é um recorte de tempo — é de tamanho de pedido.
@@ -1912,6 +1927,9 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
 
 # ── Restaurants & items ───────────────────────────────────────────────────────
 
+# Fragmento: o seletor de painel e os dois "Mostrar top N" são desta seção.
+# Arrastar o top N repintava o dashboard inteiro a cada passo do slider.
+@st.fragment
 def restaurant_item_charts(df: pd.DataFrame, items_df: pd.DataFrame):
     st.header(":material/storefront: Restaurantes e itens")
     aba = _abas(
@@ -2146,6 +2164,30 @@ def _render_log_tail(box, path: Path, n: int = 14):
 
 # ── Orders table ──────────────────────────────────────────────────────────────
 
+# max_entries: uma planilha por combinação de filtro, ordenação e busca, e a
+# busca é texto livre — sem teto, o cache cresceria uma entrada por tecla.
+@st.cache_data(show_spinner=False, max_entries=8)
+def _to_excel(display: pd.DataFrame) -> bytes:
+    """
+    A planilha do botão de export.
+
+    `st.download_button` exige os bytes na mão para desenhar o botão, então a
+    planilha era montada em TODO rerun — 122 ms de openpyxl por mexida de
+    filtro, de aba, de slider, para um arquivo que quase nunca é baixado.
+    Cacheada pelo recorte, ela é montada uma vez por combinação de filtro,
+    ordenação e busca, e os reruns seguintes só reaproveitam os bytes.
+    """
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        display.to_excel(writer, index=False, sheet_name="Pedidos")
+    return buf.getvalue()
+
+
+# Fragmento: os widgets desta seção — busca, ordenação e sentido — só mexem
+# nesta tabela. Sem o fragmento, marcar "Crescente" reexecutava a página
+# inteira (KPIs, contrafactual e os painéis de gráfico) e o navegador
+# remontava tudo. Com ele, o rerun para na fronteira da seção.
+@st.fragment
 def orders_table(df: pd.DataFrame):
     st.header(":material/table_rows: Tabela de pedidos")
     if df.empty:
@@ -2225,11 +2267,8 @@ def orders_table(df: pd.DataFrame):
     col1.download_button("CSV", csv, "ifood_pedidos.csv", "text/csv",
                          icon=":material/download:")
 
-    buf = io.BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        display.to_excel(writer, index=False, sheet_name="Pedidos")
     col2.download_button(
-        "Excel", buf.getvalue(),
+        "Excel", _to_excel(display),
         "ifood_pedidos.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         icon=":material/download:",
@@ -2238,14 +2277,24 @@ def orders_table(df: pd.DataFrame):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+@st.fragment
+def resumo_e_contrafactual(orders_df: pd.DataFrame, filtered: pd.DataFrame,
+                           filtered_items: pd.DataFrame):
+    """O topo da tela e a seção que ele anuncia, no mesmo fragmento.
+
+    Uma linha só separa o resumo da análise. Entre as seções o trabalho é do
+    espaço e do degrau de título — fio em toda troca de assunto vira grade.
+    """
+    ledger_head(orders_df, filtered, filtered_items)
+    st.divider()
+    cooking_savings(filtered, filtered_items)
+
+
 def main():
-    # A capa vem antes de tudo, na largura inteira da coluna. `?v=` com o hash
-    # do arquivo pela mesma razão do localize.html: /app/static/ é servido com
-    # cache longo, e sem isso trocar a foto não trocaria o que se vê.
+    # A capa vem antes de tudo, na largura inteira da coluna.
     if CAPA.exists():
-        versao = hashlib.sha1(CAPA.read_bytes()).hexdigest()[:8]
         st.markdown(
-            f'<div class="capa"><img src="/app/static/{CAPA.name}?v={versao}" '
+            f'<div class="capa"><img src="{_static_url(CAPA.name)}" '
             f'alt="Entregador do iFood numa moto, visto de trás, atravessando uma '
             f'avenida da cidade com a bolsa térmica nas costas">'
             f'</div>',
@@ -2261,7 +2310,7 @@ def main():
     # alt="Logo" genérico do st.logo.
     if LOGO.exists():
         st.markdown(
-            f'<div class="placa"><img src="{_logo_data_uri()}" '
+            f'<div class="placa"><img src="{_static_url(LOGO.name)}" '
             f'alt="iFood"><h1>Histórico de pedidos</h1></div>',
             unsafe_allow_html=True,
         )
@@ -2349,13 +2398,12 @@ def main():
     # histórico INTEIRO (orders_df, não filtered) — dentro do recorte do
     # próprio mês ela não tem resposta. A segunda é o veredito da seção que
     # vem logo abaixo, que sozinha ficava a duas telas de rolagem.
-    ledger_head(orders_df, filtered, filtered_items)
-
-    st.divider()
-
-    # Uma linha só separa o resumo da análise. Entre as seções o trabalho é do
-    # espaço e do degrau de título — fio em toda troca de assunto vira grade.
-    cooking_savings(filtered, filtered_items)
+    # O resumo e o contrafactual vão no MESMO fragmento, e não em dois: o
+    # controle de otimismo mora na seção de baixo mas alimenta o veredito de
+    # cima, então separá-los congelaria o número do topo enquanto o de baixo
+    # anda. Juntos, arrastar o otimismo repinta só estes dois blocos — antes
+    # repintava também os gráficos e a tabela, que o controle não toca.
+    resumo_e_contrafactual(orders_df, filtered, filtered_items)
     temporal_charts(filtered)
     restaurant_item_charts(filtered, filtered_items)
     orders_table(filtered)

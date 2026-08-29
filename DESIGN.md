@@ -607,16 +607,19 @@ O `h1` é escrito à mão — `st.title` não aceita nada ao lado — e o `alt` 
 verdade daqui, sem depender de conserto no DOM. O bloco que o `localize.html`
 mantinha para trocar o `alt="Logo"` genérico do `st.logo` foi removido junto.
 
-O PNG vai embutido em `data:` URI. A pasta `static/` já serve o
-`localize.html` e pendurar a marca nela acrescentaria uma requisição e mais
-uma armadilha de cache.
+**Nenhuma imagem vai embutida.** Logo e capa saem os dois de `static/`,
+porque o markdown é reenviado pelo websocket a cada rerun: em `data:` URI o
+wordmark eram 63 KB em toda mexida de filtro, contra ~90 bytes de URL. O `?v=`
+com o hash do arquivo é a saída da armadilha de cache — `/app/static/` é
+servido com cache longo, e sem ele trocar a imagem não trocaria o que se vê.
+O hash é cacheado: ele lê o arquivo inteiro, e a capa eram 176 KB relidos e
+digeridos a cada rerun.
 
-**A regra do peso decide onde o arquivo mora.** O logo tem 47 KB e vai
-embutido; a capa tem 117 KB e vai **servida de `static/`**, porque o markdown é
-reenviado pelo websocket a cada rerun — embutida, ela custaria esse peso em
-toda mexida de filtro. Servida, o navegador guarda a primeira e não pede de
-novo, e o `?v=` com o hash do arquivo garante que trocar a foto troque o que se
-vê. `assets/` guarda as marcas; `static/` guarda o que é servido.
+**A versão servida é dimensionada para a tela.** O wordmark original tem
+2093px e aparece a 38px de altura — 55 vezes maior do que precisa. `static/`
+leva um WebP de 240px (5,6 KB, três vezes o tamanho de tela, para DPR alto);
+`assets/` continua com o original de 47 KB. `assets/` guarda as marcas;
+`static/` guarda o que é servido.
 
 ### Ledger Head
 O topo da tela, e o único lugar onde o degrau de Display aparece. Um bloco só
@@ -863,6 +866,16 @@ sinal de que havia movimento decorativo.
   `layout="wide"` deixa qualquer parágrafo passar de 150ch sem parecer errado.
 - **Do** medir quanto dura um rerun antes de decidir se ele precisa de
   feedback. ~985ms pede; 100ms não.
+- **Do** fechar uma seção num `@st.fragment` quando os widgets dela só mexem
+  nela. Sem isso o Streamlit reexecuta a página inteira: marcar "Crescente" na
+  tabela custava ~900ms remontando KPIs, contrafactual e gráficos; dentro do
+  fragmento custa ~140ms. São quatro fronteiras, uma por alcance de controle:
+  a tabela, "Quando e quanto", "Restaurantes e itens", e o par
+  resumo + contrafactual, que dividem o controle de otimismo.
+- **Do** cachear o que o rerun monta e quase ninguém consome. O
+  `st.download_button` exige os bytes na mão para desenhar o botão, então a
+  planilha do export era montada em todo rerun: 137ms de openpyxl por mexida
+  de filtro, contra 1,7ms no cache.
 - **Do** atrasar o estado de espera. Sem atraso, todo rerun barato vira um
   pisca.
 - **Do** varrer a tela inteira contra a paleta antes de dar cor por encerrada:
@@ -921,8 +934,14 @@ sinal de que havia movimento decorativo.
   linhas o ícone e a ressalva viram colunas.
 - **Don't** dar tamanho fixo à quantia: ela vai de três a seis dígitos, e o
   recorte de um ano inteiro corta em 375px.
-- **Don't** embutir em `data:` URI arquivo que pese: o markdown vai pelo
-  websocket a cada rerun, e o custo se paga em toda mexida de filtro.
+- **Don't** embutir imagem em `data:` URI: o markdown vai pelo websocket a
+  cada rerun, e o custo se paga em toda mexida de filtro. Imagem mora em
+  `static/`, servida, dimensionada para a tela e com `?v=` do conteúdo.
+- **Don't** cortar um fragmento entre um controle e quem lê o valor dele. O
+  otimismo mora na seção do contrafactual e alimenta o veredito do topo: em
+  fragmentos separados, o número de cima congelaria enquanto o de baixo anda.
+  Os dois vão no mesmo fragmento — a fronteira é o alcance do controle, não o
+  desenho da seção.
 - **Don't** reativar o `st.logo`: a marca está na placa, e nos dois lugares ao
   mesmo tempo vira duas marcas na mesma tela.
 - **Don't** deixar o gap de 16px do Streamlit governar sozinho uma coluna
