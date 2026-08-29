@@ -1,7 +1,8 @@
 # Wake-up — iFood Order Tracker
 
-Estado em **29/08/2026**, fim da sessão de performance e polimento. Última
-linha do `git log`: `90d9d8f`. Working tree limpo, tudo em `main` e no remoto.
+Estado em **29/08/2026**, fim da sessão de performance, polimento e crítica do
+seletor de perfil. Última linha do `git log`: `39313e0`. Working tree limpo,
+tudo em `main` e no remoto.
 
 Leia junto: `PRODUCT.md` (verdade de produto), `DESIGN.md` (sistema visual e
 as regras nomeadas), `.impeccable/critique/` (a auditoria de UX que originou
@@ -11,9 +12,10 @@ metade do trabalho abaixo).
 
 ## Onde estamos
 
-Em 29/08, depois da coleta, entraram **optimize** e **polish**. Antes delas,
-na mesma data, a rodada de **adapt** — celular e tablet, com o desktop
-intocado. Antes dela, o painel passou por três rodadas do `/impeccable`: **shape**
+Em 29/08, depois da coleta, entraram **optimize**, **polish** e uma
+**critique** de componente único — o seletor de perfil, que o André apontou
+três vezes como feio e que acabou trocando de forma. Antes delas, na mesma
+data, a rodada de **adapt** — celular e tablet, com o desktop intocado. Antes dela, o painel passou por três rodadas do `/impeccable`: **shape**
 (reordenação da tela), **critique** (15/40) e **audit** (14/20). O que os dois
 últimos apontaram está corrigido, exceto um item documentado como limitação e
 um encerrado por decisão.
@@ -40,6 +42,9 @@ Nove commits, todos em `main` e no remoto:
 | `b8bd037` | Coleta de 29/08/2026, 260 pedidos |
 | `d710f6d` | `/impeccable optimize`: quatro fragmentos, planilha cacheada, logo servido |
 | `90d9d8f` | `/impeccable polish`: o veredito do mês nomeia o mês (29/08) |
+| `3605721` | polegar do slider volta a 12px e ao centro da trilha |
+| `0fa6b51` | cursor de texto some do seletor de perfil |
+| `39313e0` | perfil vira segmentado, nome entra na quantia, furos de sistema |
 
 ---
 
@@ -280,7 +285,43 @@ pendências da crítica de 28/08.
   ("Em agosto de 2026, 12% acima da média") e só quando os dois não coincidem.
 - `DESIGN.md`: a regra do escopo no componente Ledger Head, mais o `Don't`.
 
-**12. Nada mais está pendente.** Não há backlog aberto — as duas ressalvas
+**12. O seletor de perfil** (commits `3605721`, `0fa6b51`, `39313e0`). Começou
+como "essa bolinha está desalinhada" e terminou trocando a forma de um
+controle. Vale ler inteiro porque **duas correções minhas seguidas trataram
+sintoma**:
+
+- **A bolinha do slider** (`3605721`). A área de toque crescia por `padding`
+  com margem negativa — técnica certa para elemento sem tinta, errada para
+  este: o polegar tem fundo e raio de 100%, então o padding pintava a bolinha
+  em 24 e a margem a puxava 6px acima do centro da trilha. No dedo era 44 de
+  padding e 44 de bolinha. A área agora vai num `::after` transparente.
+- **O cursor de texto** (`0fa6b51`). `caret-color: transparent` no input do
+  `stSelectbox`. Primeiro condicionei ao menu fechado — errado, é com o menu
+  aberto que se olha para o campo.
+- **`/impeccable critique` no seletor: 14/36** (dois agentes, snapshot em
+  `.impeccable/critique/2026-08-29T15-53-48Z__dashboard-py-seletor-de-perfil.md`).
+  O diagnóstico: a feiura era **derivada da forma**. Um combobox de busca, com
+  filtragem por digitação e estado "Nenhum resultado", para escolher entre
+  duas pessoas. E o meu conserto anterior foi o pior dos três — apaguei o
+  caret e o `outline` de 2px foi pousar no mesmo `<input>` de 2px, virando uma
+  lasca vermelha de ~6×24 colada no nome. Mesmo pixel, outra cor.
+- **A troca de forma** (`39313e0`). `st.segmented_control`, o mesmo componente
+  do seletor de painel, com o estado ativo que o DESIGN.md já especificava.
+  Volta a ser menu quando os nomes não couberem: ≤3 perfis **e** o nome mais
+  longo cabendo no segmento, medido, porque o nome é editável.
+- **O nome saiu da gaveta:** o rótulo da quantia leva a pessoa. No celular a
+  gaveta abre recolhida, e sem isso o número que o produto existe para fazer
+  doer é anônimo.
+- **Dez furos de sistema no mesmo passe:** anel de foco na caixa e não no
+  input; campo em `surface-raised` (era `surface-base`, 1,02:1 contra a
+  gaveta); menu sem sombra, subindo para `surface-raised` com fio; pílula da
+  opção escolhida saindo de `#95a4c1` para tinta de 10% do vermelho com peso
+  600; `line-height` 19,6 → 22,4; `cursor: pointer`; hover mudando o fio;
+  `<title>open</title>` e `<title>Delete</title>` traduzidos; alvo do chevron
+  (era CSS morto: `svg[role="button"]` não casa com o que o BaseWeb emite);
+  campo em 44px no dedo.
+
+**13. Nada mais está pendente.** Não há backlog aberto — as duas ressalvas
 abertas estão no topo desta seção.
 
 ---
@@ -312,6 +353,17 @@ abertas estão no topo desta seção.
 ---
 
 ## Armadilhas que vão morder de novo
+
+**`aria-selected` do BaseWeb segue o item REALÇADO, não o escolhido.** Numa
+lista de opções, quem marca a escolha é uma pílula que é um `<div>` DENTRO do
+`<li>` — e ela vinha com `#95a4c1`, cor que não existe na paleta. Quem
+estilizar por `aria-selected` sem olhar o DOM pinta a linha errada. Confira o
+atributo real antes de escrever a regra.
+
+**A técnica de crescer alvo com `padding` + margem negativa só serve para
+elemento sem tinta.** Onde o elemento tem fundo, o padding pinta o alvo
+inteiro e a margem negativa o desloca. Com tinta, a área vai num `::after`
+transparente.
 
 **O detector do impeccable não lê `.py`.** `detect.mjs dashboard.py` devolve
 `[]` porque a extensão não está na lista de varríveis — vazio por construção,
