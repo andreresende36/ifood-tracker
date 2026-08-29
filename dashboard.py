@@ -563,9 +563,14 @@ st.markdown("""
        widget não precisa ser redesenhado. O dedo tem outro tamanho, e o que
        ele pede está no bloco `pointer: coarse` lá embaixo. */
     [data-baseweb="tag"] { min-height: 26px; }
-    /* O polegar do slider nasce com 12x12. A área cresce, o desenho não. */
-    [data-testid="stSlider"] [role="slider"] {
-        box-sizing: content-box; padding: 6px; margin: -6px;
+    /* O polegar do slider nasce com 12x12 e é ELE que carrega a tinta. Padding
+       no próprio elemento pinta o círculo inteiro: a bolinha saía com 24 de
+       diâmetro, e a margem negativa que devolvia o espaço tirava o polegar do
+       centro da trilha — ficava 6px acima dela. A área cresce num ::after
+       transparente, que não pinta e não desloca: o polegar fica no lugar que o
+       baseweb calculou, com 12 de desenho e 24 de alvo. */
+    [data-testid="stSlider"] [role="slider"]::after {
+        content: ""; position: absolute; inset: -6px;
     }
     [data-baseweb="tag"] span[role="presentation"] {
         min-width: 24px; min-height: 24px;
@@ -657,9 +662,7 @@ st.markdown("""
            controle é solto — polegar do slider, seta de um campo, botão —
            a área vai a 44 sem o desenho crescer: padding com margem negativa
            do mesmo tamanho. */
-        [data-testid="stSlider"] [role="slider"] {
-            padding: 16px; margin: -16px;
-        }
+        [data-testid="stSlider"] [role="slider"]::after { inset: -16px; }
         [data-baseweb="select"] svg[role="button"],
         [data-baseweb="select"] [role="button"] > svg {
             padding: 11px; margin: -11px;

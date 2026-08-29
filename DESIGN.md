@@ -452,7 +452,13 @@ número não couber.
 **No dedo** o alvo é 44×44 (WCAG 2.5.8 AAA): polegar do slider, seta de campo,
 botão, cabeçalho de expansor, linha de checkbox e os dois controles da gaveta
 de filtros, que no celular é o gesto mais frequente da tela. A área cresce por
-padding com margem negativa do mesmo tamanho — o desenho não muda. O ✕ do chip
+padding com margem negativa do mesmo tamanho — o desenho não muda **enquanto o
+elemento não carrega tinta**. Onde ele carrega, a técnica pinta o alvo inteiro:
+o polegar do slider tem fundo e raio de 100%, e o padding de 6px transformava
+uma bolinha de 12 numa de 24, com a margem negativa tirando ela do centro da
+trilha. Elemento com tinta cresce por `::after` transparente
+(`position: absolute; inset: -6px`, e `-16px` no dedo): a área cresce, o
+desenho fica onde estava. O ✕ do chip
 é a exceção declarada: 44 não cabe num chip sem transformar o filtro numa
 fileira de botões, então ele vai a 36 e o chip cresce junto, para o alvo não
 vazar por cima do vizinho. E onde não há hover, a barra de ferramentas da
@@ -869,6 +875,9 @@ sinal de que havia movimento decorativo.
   `.stMarkdown p` do Streamlit ganha.
 - **Do** escolher o intervalo pelo papel — cola, base ou solta — e conferir no
   render que nenhum valor fora dos três apareceu.
+- **Do** conferir se o elemento tem fundo antes de crescer o alvo com padding.
+  Com tinta, o padding pinta junto e a margem negativa desloca — a área vai num
+  `::after` transparente.
 - **Do** limitar o curso de um slider (30rem). Na largura inteira da coluna,
   arrastar de 50% a 150% vira travessia e o controle lê como régua da seção.
 - **Do** medir a linha em caracteres no render, não a olho: a coluna larga do
