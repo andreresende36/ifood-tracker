@@ -517,5 +517,10 @@ parte de editar o arquivo.
 - **Don't** emitir a mesma legenda dentro de cada coluna de um par: a nota que
   vale para a linha inteira sai uma vez, antes de abrir as colunas.
 - **Don't** pintar de vermelho um desfecho bom. O chip de delta da economia
-  saía em vermelho com seta para cima — alarme onde não há alarme.
+  saía em vermelho com seta para cima — alarme onde não há alarme. Ele diz a
+  **queda no gasto**, então é negativo, e com `delta_color="inverse"` sai em
+  Economia com a seta para baixo.
+- **Don't** usar o menos tipográfico (`−`, U+2212) num delta de `st.metric`: o
+  Streamlit não reconhece o número como negativo, trata como alta e inverte a
+  cor e a seta. O sinal ali é o hífen ASCII.
 - **Don't** deixar a barra de ferramentas do Plotly visível.

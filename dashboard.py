@@ -93,6 +93,10 @@ st.markdown("""
     [data-testid="stBaseButton-segmented_controlActive"] { color: #f0787f !important; }
     [data-testid="stBaseButton-segmented_controlActive"] p { font-weight: 600; }
 
+    /* O verde do delta do KPI é o do Streamlit; a paleta da casa tem o seu. */
+    [data-testid="stMetricDelta"] svg { fill: #3fbf90; }
+    [data-testid="stMetricDelta"] { color: #3fbf90; }
+
     /* O valor do slider flutua sobre a superfície, não sobre o polegar — em
        #c9101d dava 3,22:1 como texto. */
     [data-testid="stSliderThumbValue"] { color: #f0787f; }
@@ -1205,10 +1209,18 @@ def cooking_savings(df: pd.DataFrame, items_df: pd.DataFrame):
     )
     home_food = sav["home_cost"].sum()
 
-    # Sem chip de delta no primeiro tile: economizar é o desfecho bom, e o chip
-    # saía em vermelho com seta para cima — alarme onde não há alarme.
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Economia total",      _brl(total_saved))
+    # O chip diz a queda no GASTO, não a alta na economia: por isso é negativo,
+    # e com delta_color="inverse" o negativo sai em verde com seta para baixo —
+    # economizar é o desfecho bom.
+    #
+    # O sinal tem que ser o hífen ASCII. Com o "−" tipográfico (U+2212) o
+    # Streamlit não reconhece o número como negativo, trata como alta e pinta
+    # de vermelho com seta para CIMA: era esse o chip que anunciava a economia
+    # como se fosse alarme.
+    queda = -(total_saved / total_pago * 100) if total_pago else 0
+    c1.metric("Economia total",      _brl(total_saved),
+              f"{queda:.0f}% no gasto", delta_color="inverse")
     c2.metric("Custo cozinhando",    _brl(home_total))
     c3.metric("Economia nos pratos", _brl(food_saved))
     c4.metric("Taxas evitadas",      _brl(fees))
