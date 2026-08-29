@@ -948,6 +948,13 @@ sinal de que havia movimento decorativo.
   Streamlit não reconhece o número como negativo, trata como alta e inverte a
   cor e a seta. O sinal ali é o hífen ASCII.
 - **Don't** deixar a barra de ferramentas do Plotly visível.
+- **Don't** deixar o cursor de texto piscando num escolhedor. O `st.selectbox`
+  é um combobox: o valor sai num `<div>` e sobra um `<input>` de 2px colado
+  nele, e o cursor focado lê como traço solto da última letra. Com o menu
+  aberto é pior, porque é aí que se olha para o campo. Ele some em todo estado;
+  quem digitar para filtrar vê as letras, que é o retorno que importa. No
+  multiselect não se mexe: lá o input tem 18px, o cursor cai em espaço livre e
+  digitar é o caminho normal com dezenas de restaurantes.
 - **Don't** deixar o veredito do mês sem escopo ao lado de uma quantia que
   não é daquele mês. A nota de rodapé não resolve: quem lê a linha do topo não
   chega até ela.

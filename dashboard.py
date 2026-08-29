@@ -528,6 +528,22 @@ st.markdown("""
     [data-testid="stDateInputField"] { color: rgba(230, 232, 236, 0.72) !important; }
     [data-testid="stDateInputField"]::placeholder { color: rgba(230, 232, 236, 0.72); }
 
+    /* O seletor de perfil é um escolhedor, não um campo de digitar — mas o
+       BaseWeb o monta como combobox: o valor sai num <div> e sobra um <input>
+       de 2px logo depois dele. Focado com o menu fechado, o cursor de texto
+       piscava colado no "é" de "André", parecendo traço solto da letra (no
+       multiselect isso não acontece: lá o input tem 18px e o cursor cai em
+       espaço livre).
+
+       Some em todo estado, inclusive de menu aberto: enquanto nada foi
+       digitado o input continua com 2px e o cursor continua colado no nome,
+       e é justamente com o menu aberto que se olha para ele. Quem digitar
+       para filtrar vê as letras aparecerem — o que se perde é só o traço
+       piscando, e ele aqui custa mais do que entrega. No multiselect não se
+       mexe: lá o input tem 18px, o cursor cai em espaço livre e digitar é o
+       caminho normal com dezenas de restaurantes. */
+    [data-testid="stSelectbox"] input { caret-color: transparent; }
+
     /* Raio dos chips de filtro: o BaseWeb entrega 6.08px, fora da escala.
        O sistema tem um raio só. */
     [data-baseweb="tag"] { border-radius: 8px; }
