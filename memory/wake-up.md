@@ -1,7 +1,7 @@
 # Wake-up — iFood Order Tracker
 
-Estado em **28/08/2026**, fim da sessão de design. Última linha do `git log`:
-`e833b24`.
+Estado em **29/08/2026**, fim da sessão de adaptação. Última linha do
+`git log`: `b8bd037`. Working tree limpo, tudo em `main` e no remoto.
 
 Leia junto: `PRODUCT.md` (verdade de produto), `DESIGN.md` (sistema visual e
 as regras nomeadas), `.impeccable/critique/` (a auditoria de UX que originou
@@ -11,7 +11,8 @@ metade do trabalho abaixo).
 
 ## Onde estamos
 
-O painel passou por três rodadas do `/impeccable` nesta sessão: **shape**
+Em 29/08 entrou a rodada de **adapt** — celular e tablet, com o desktop
+intocado. Antes dela, o painel passou por três rodadas do `/impeccable`: **shape**
 (reordenação da tela), **critique** (15/40) e **audit** (14/20). O que os dois
 últimos apontaram está corrigido, exceto um item documentado como limitação e
 um encerrado por decisão.
@@ -32,11 +33,30 @@ Nove commits, todos em `main` e no remoto:
 | `5a1086f` | `/impeccable bolder`: cabeçalho-extrato e placa |
 | `95e2a99` | `/impeccable layout`: escala de espaço de três degraus |
 | `ec48645` | remove o conserto morto do alt do st.logo |
-| (não commitado) | `/impeccable typeset`: medida de 72ch e compensação de escuro |
+| `db8d777` | `/impeccable typeset` + rótulo em toda marca + cor dos estados + movimento |
+| `92c630c` | Capa no topo da coluna de conteúdo, no feitio do Notion |
+| `2f8ef53` | `/impeccable adapt`: celular e tablet, desktop intocado (29/08) |
+| `b8bd037` | Coleta de 29/08/2026, 260 pedidos |
 
 ---
 
 ## O que fazer a seguir
+
+**Nada está pendente e não há backlog aberto.** Ficam duas ressalvas, nenhuma
+delas trabalho parado:
+
+- **Verificar num aparelho de verdade.** Toda a medição da rodada de celular e
+  tablet foi feita com viewport emulada. Layout, alvo de toque e ausência de
+  rolagem lateral estão medidos; o que emulação não prova é o toque de fato, a
+  rolagem por dentro do gráfico e da tabela com o dedo, e a barra do navegador
+  comendo a altura. Ver [[verificar-no-ambiente-certo]] — nesta base já houve
+  três "funciona" que eram falsos por ambiente errado.
+- **A rotação continua contida, não corrigida.** O gráfico permanece desenhado
+  na largura antiga até o próximo rerun; o que a rodada garantiu é que isso não
+  desliza mais a página nem esconde a tabela. Não há conserto conhecido — ver a
+  tabela de tentativas no `DESIGN.md`.
+
+Abaixo, o que cada leva entregou, para quem precisar do porquê.
 
 **1. Reflow de gráfico: confirmado (29/08/2026).** Girando 812×375 → 375×812
 sem recarregar, o container do gráfico foi a 343px e o SVG ficou em 780. No
@@ -51,7 +71,7 @@ rola por dentro, a tabela é presa à coluna e se remede). O gráfico continua
 desenhado na largura antiga até o próximo rerun — não há conserto, só
 contenção.
 
-**1b. `/impeccable adapt` está no working tree, sem commit.** Celular e tablet,
+**1b. `/impeccable adapt`** (commit `2f8ef53`). Celular e tablet,
 desktop intocado (verificado a 1440: ponteiro fino, padding 80px, capa −80px,
 h2 28px, 4 KPIs lado a lado, nenhuma regra nova ativa).
 
@@ -68,7 +88,7 @@ h2 28px, 4 KPIs lado a lado, nenhuma regra nova ativa).
 - `DESIGN.md`: subseção "Tela estreita e dedo" em Layout, mais a Regra das
   Duas Perguntas.
 
-**2. O cabeçalho-extrato está no working tree, sem commit.** Rodada de
+**2. O cabeçalho-extrato** (commit `5a1086f`). Rodada de
 `/impeccable bolder` sobre a tela inteira. O movimento é um só: o degrau de
 Display deixou de servir ao nome da tela e passou a servir à quantia.
 
@@ -90,7 +110,7 @@ Verificado a 1440 e a 375, com filtro de abertura e com "Limpar filtros"
 (R$ 10.201,76, recorte "Nov/2025 – Ago/2026"). Detector limpo sobre o bloco
 `<style>` extraído.
 
-**3. A escala de espaço está no working tree, sem commit.** Rodada de
+**3. A escala de espaço** (commit `95e2a99`). Rodada de
 `/impeccable layout`. O Streamlit empilha tudo com `gap: 16px` e a coluna não
 tinha cadência nenhuma fora do título de seção.
 
@@ -106,7 +126,7 @@ tinha cadência nenhuma fora do título de seção.
 Medido no render: todo intervalo da coluna caiu em 8, 16, 20 ou 28 — nenhum
 valor solto. Detector limpo (geral e `--scope layout`).
 
-**4. A tipografia está no working tree, sem commit.** Rodada de
+**4. A tipografia** (commit `db8d777`). Rodada de
 `/impeccable typeset`.
 
 - **Medida 72ch** na prosa da coluna. Media 166 caracteres por linha a 1440px
@@ -121,7 +141,7 @@ valor solto. Detector limpo (geral e `--scope layout`).
 Medido no render a 1440 (72ch) e a 375 (49ch), os dois dentro da faixa.
 Detector limpo, geral e `--scope type`.
 
-**5. Toda marca leva o seu valor** (mesma leva, sem commit). Pedido do André
+**5. Toda marca leva o seu valor** (commit `db8d777`). Pedido do André
 olhando o gráfico de economia por tipo de prato: o padrão de rótulo daquele
 gráfico vale para todos, qualquer que seja a grandeza.
 
@@ -142,7 +162,7 @@ menor rótulo e a série inteira encolhia por causa de uma barra curta.
 Verificado com filtros limpos nos casos densos: 10 meses, 12 meses sazonais,
 top 15 horizontal, linha de ticket médio, rosca e 375px.
 
-**6. A cor dos estados** (mesma leva, sem commit). Rodada de
+**6. A cor dos estados** (commit `db8d777`). Rodada de
 `/impeccable colorize`. A tela parecia disciplinada porque eu nunca tinha visto
 um alerta — e eles aparecem o tempo todo, já que o recorte de abertura é um mês
 e metade dos painéis abre sem série.
@@ -162,7 +182,7 @@ e metade dos painéis abre sem série.
 Depois: **zero**. Metade só aparecia em hover ou em estado vazio — a olho, não
 se acha.
 
-**7. Movimento** (mesma leva, sem commit). Rodada de `/impeccable animate`.
+**7. Movimento** (commit `db8d777`). Rodada de `/impeccable animate`.
 A tela não tinha movimento nenhum — toda transição do Streamlit vem com
 duração zero.
 
@@ -184,7 +204,7 @@ assim: ida 1→0.55 em 220ms com 220ms de atraso, volta em 160ms sem atraso,
 sidebar em 1. O *feel* continua não verificado; abra o painel e troque de
 painel de análise para julgar.
 
-**8. Capa no topo** (sem commit). Pedido do André: a foto que ele largou em
+**8. Capa no topo** (commit `92c630c`). Pedido do André: a foto que ele largou em
 `assets/` vai no topo do corpo principal, no feitio das capas do Notion, com
 transição suave para o conteúdo.
 
@@ -213,7 +233,8 @@ transição suave para o conteúdo.
   16px (o bloco do `<style>` conta como irmão de altura zero) e a capa zera o
   respiro de 2.25rem.
 
-**9. Nada mais está pendente.** Não há backlog aberto.
+**9. Nada mais está pendente.** Não há backlog aberto — as duas ressalvas
+abertas estão no topo desta seção.
 
 ---
 
