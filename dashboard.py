@@ -991,8 +991,19 @@ def _load_casal():
 
 
 def reload():
+    """
+    Relê o banco DENTRO desta execução, sem `st.rerun()`.
+
+    O rerun era o que apagava os filtros. O Streamlit descarta o estado de
+    widget que não foi montado na execução em curso, e `st.rerun()` aqui
+    interrompe o script ANTES da barra lateral existir: na execução seguinte
+    os filtros voltavam vazios — a tela pulava do mês corrente para o
+    histórico inteiro. E o rerun não comprava nada: `_acoes_do_perfil` roda
+    antes de `load_data(sel_profile)`, então limpar o cache aqui já faz a
+    leitura desta mesma execução pegar o banco novo. Uma execução em vez de
+    duas.
+    """
     load_data.clear()
-    st.rerun()
 
 
 # ── Sidebar filters ───────────────────────────────────────────────────────────
@@ -1011,8 +1022,10 @@ def _clear_filters():
     session_state não força o re-render visual do multiselect.
     """
     n = st.session_state.get("flt_nonce", 0)
+    espelho = st.session_state.setdefault("flt_espelho", {})
     for name in FILTER_NAMES:
         st.session_state.pop(f"{name}_{n}", None)  # descarta estado antigo
+        espelho.pop(f"{name}_{n}", None)           # e o espelho junto
     st.session_state["flt_nonce"] = n + 1
 
 
@@ -1020,19 +1033,34 @@ def _filter_default(key: str, options: list, wanted=()) -> list:
     """
     Estado inicial de um multiselect de filtro.
 
-    Faz duas coisas:
+    Faz três coisas:
     1. Descarta seleções que não existem mais nas opções — acontece ao trocar
        de perfil (ex.: 'Ago' selecionado no André, mas a Carol não tem pedidos
        em agosto). Sem isso o Streamlit quebra com valor fora da lista.
-    2. Só na PRIMEIRA renderização da sessão, pré-seleciona `wanted`. Depois
-       disso devolve vazio, senão o botão 'Limpar todos os filtros' remontaria
-       os widgets já preenchidos de novo e nunca limparia nada.
+    2. Espelha a seleção fora do estado de widget, e restaura dali quando ele
+       some. O Streamlit descarta o estado de todo widget que não foi montado
+       numa execução, e `st.rerun()` chamado antes da barra lateral existir
+       (renomear perfil, e antes também recarregar e coletar) fazia
+       exatamente isso: a tela voltava sem filtro nenhum, do mês corrente
+       para o histórico inteiro, com os chips ainda pintados na tela. O
+       espelho é uma chave comum de session_state, que rerun não apaga.
+    3. Só na PRIMEIRA renderização da sessão, pré-seleciona `wanted`. Depois
+       disso devolve vazio, senão o botão 'Limpar filtros' remontaria os
+       widgets já preenchidos de novo e nunca limparia nada. O espelho não
+       atrapalha isso: limpar troca o nonce, e a chave nova não tem espelho.
     """
+    espelho = st.session_state.setdefault("flt_espelho", {})
+
     atual = st.session_state.get(key)
     if isinstance(atual, list):
         mantidos = [v for v in atual if v in options]
         if len(mantidos) != len(atual):
             st.session_state[key] = mantidos
+        espelho[key] = mantidos
+        return []  # com a key viva, o Streamlit ignora o default de qualquer jeito
+
+    if key in espelho:
+        return [v for v in espelho[key] if v in options]
 
     if st.session_state.get("flt_seeded"):
         return []
@@ -2303,10 +2331,10 @@ def run_scraper(profile: str):
             status.update(label="Coleta encerrou com avisos — confira o log abaixo.",
                           state="error")
 
+    # Sem `st.rerun()` pela mesma razão do reload(): ele interrompe o script
+    # antes dos filtros existirem e o Streamlit descarta o estado deles.
     load_data.clear()
     st.toast("Dados atualizados!" if ok else "Coleta finalizada com avisos.")
-    time.sleep(1)
-    st.rerun()
 
 
 def _read_log(path: Path) -> str:
@@ -2636,8 +2664,12 @@ def main():
                 f"ou rode `python scraper.py -p {sel_profile}`.",
                 icon=":material/inbox:",
             )
+        # Aqui o rerun é necessário: o banco já foi lido acima nesta execução,
+        # e sem ele a tela continuaria mostrando o vazio até o próximo clique.
+        # É seguro: o espelho de `_filter_default` sobrevive a rerun.
         if st.button("Recarregar", icon=":material/refresh:"):
             reload()
+            st.rerun()
         return
 
     # A procedência do dado é legenda do título, não uma linha com botão ao
