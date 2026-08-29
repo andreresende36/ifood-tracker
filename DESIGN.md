@@ -331,7 +331,12 @@ entre controles do mesmo peso inventa hierarquia onde não existe.
 A exceção é o cromo que o navegador desenha e o design system só tinge: o
 polegar da barra de rolagem (`{rounded.chrome-scrollbar}`) e o anel de foco
 (`{rounded.chrome-focus}`) seguem a curvatura da própria peça do navegador, não
-a do sistema. São dois valores, ambos fora do conteúdo.
+a do sistema. São dois valores, ambos fora do conteúdo. O terceiro é o polegar
+do slider, redondo por ser uma alça e não uma superfície.
+
+Tudo o mais é 8px, inclusive o que o Streamlit entrega com outra medida: chip
+de filtro (6,08px de fábrica), chip de `código` e caixa de checkbox (4px) e o
+chip de delta do KPI (pílula). O framework não decide a forma do sistema.
 
 Marcas de dado têm respiro de 2px na cor da superfície entre vizinhas (barras
 adjacentes, células de heatmap, fatias de rosca). É separação por vão, não por

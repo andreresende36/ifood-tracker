@@ -110,6 +110,13 @@ st.markdown("""
        O sistema tem um raio só. */
     [data-baseweb="tag"] { border-radius: 8px; }
 
+    /* Mesma correção no chip de código e na caixa do checkbox, que vinham
+       com 4px de fábrica. */
+    .block-container code, [data-testid="stSidebar"] code { border-radius: 8px; }
+    label[data-baseweb="checkbox"] > span:first-child { border-radius: 8px; }
+    /* O chip de delta do KPI vem em pílula (9999px) — fora da escala também. */
+    [data-testid="stMetricDelta"] { border-radius: 8px; }
+
     /* A proibição de sombra vale para o que o Streamlit desenha sozinho: a
        barra flutuante de ferramentas da tabela vem com box-shadow de fábrica,
        e era a única sombra viva na tela inteira. */
