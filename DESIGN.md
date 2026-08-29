@@ -642,6 +642,15 @@ outros meses") sai em tinta recuada e peso normal: pintar a frase inteira faz
 o vermelho parar de significar alguma coisa, e tirar a ressalva daqui perde a
 frase mais forte que a tela sabe dizer ("e acima de todo mês anterior").
 
+**O veredito nomeia o mês quando o recorte não é ele.** O veredito é sempre do
+mês de referência; a quantia ao lado é do filtro da barra lateral. No recorte
+de abertura os dois coincidem e o rótulo da quantia já diz "Agosto de 2026" —
+repetir seria ruído. Com o filtro de mês limpo, "12% acima da média" encostado
+num total de dez meses lê como se fosse dos dez, e a nota que declarava o
+escopo morava dois blocos abaixo, no fim de uma legenda de 14px. Então o
+escopo entra na frente da frase — "Em agosto de 2026, 12% acima da média" —
+em tinta recuada, porque a cor continua sendo só do veredito.
+
 O veredito é **texto corrido**, não `inline-flex`: como flex, ao quebrar em
 duas linhas o ícone e a ressalva viravam colunas e a frase se desmontava no
 estreito. O ícone de tendência é Material Symbols alinhado pelo baseline, e o
@@ -930,6 +939,9 @@ sinal de que havia movimento decorativo.
   Streamlit não reconhece o número como negativo, trata como alta e inverte a
   cor e a seta. O sinal ali é o hífen ASCII.
 - **Don't** deixar a barra de ferramentas do Plotly visível.
+- **Don't** deixar o veredito do mês sem escopo ao lado de uma quantia que
+  não é daquele mês. A nota de rodapé não resolve: quem lê a linha do topo não
+  chega até ela.
 - **Don't** montar a frase do veredito com `inline-flex`: ao quebrar em duas
   linhas o ícone e a ressalva viram colunas.
 - **Don't** dar tamanho fixo à quantia: ela vai de três a seis dígitos, e o

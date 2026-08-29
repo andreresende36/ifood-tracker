@@ -1745,13 +1745,22 @@ def ledger_head(orders_df: pd.DataFrame, df: pd.DataFrame, items_df: pd.DataFram
     ressalva = ""
     if s and not s["sem_base"]:
         icone, cor, veredito, ressalva = _veredito(s)
-        # A cor fica só no veredito; a ressalva vai junto, na mesma linha, em
-        # tinta de leitura e peso normal. Pintar a frase inteira faz o vermelho
+        # O veredito é sempre do mês de referência; a quantia ao lado é do
+        # recorte da barra lateral. Quando os dois coincidem — o filtro de
+        # abertura — o rótulo da quantia já nomeia o mês e repeti-lo seria
+        # ruído. Quando não coincidem, "12% acima da média" encostado num
+        # total de dez meses lê como se fosse dos dez: aí o escopo vai na
+        # frente da frase, não na nota de rodapé dois blocos abaixo.
+        mes_ref = f"{MESES_EXTENSO[s['ref'].month]} de {s['ref'].year}"
+        escopo = "" if periodo == mes_ref else f"Em {mes_ref.lower()}, "
+        # A cor fica só no veredito; escopo e ressalva vão na mesma linha, em
+        # tinta recuada e peso normal. Pintar a frase inteira faz o vermelho
         # parar de significar alguma coisa — e tirar a ressalva daqui perde
         # justamente a frase mais forte que a tela sabe dizer.
         veredito_html = (
             f'<span class="ledger-veredito" style="color:{cor}">'
-            f'<span class="ledger-icone">{icone}</span>{veredito}'
+            f'<span class="ledger-icone">{icone}</span>'
+            f'<span class="ledger-ressalva">{escopo}</span>{veredito}'
             f'<span class="ledger-ressalva">{ressalva}</span></span>'
         )
 
