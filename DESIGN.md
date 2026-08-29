@@ -443,10 +443,25 @@ seleção só na cor, ausência de marco `main`. O projeto não convive com isso
 `static/localize.html` roda no documento pai e corrige idioma, atributos,
 `aria-pressed`, marco e atalho de teclado.
 
-O que essa costura **não** alcança: o reflow dos gráficos ao redimensionar a
-janela sem recarregar. `Plotly.Plots.resize` não move nada e `Plotly.relayout`
-só obedece quando o container encolhe — o Streamlit reimpõe a largura. Fica
-como limitação conhecida, e recarregar corrige.
+**Limitação conhecida — o gráfico não segue a janela.** Redimensionar sem
+recarregar deixa o gráfico na largura anterior. A largura pertence ao
+componente do Streamlit, que a mede uma vez e grava `layout.width` na figura.
+Quatro caminhos foram testados e nenhum vence:
+
+| tentativa | resultado |
+|---|---|
+| `Plotly.Plots.resize(el)` | roda sem erro, não move o SVG |
+| `Plotly.relayout(el, {width})` | obedece só quando o container encolhe |
+| apagar `layout.width` à mão | o componente reescreve ao redesenhar |
+| `config: {responsive: true}` | o autosize nunca vale, com `layout.width` posto |
+| componente devolvendo a largura, para provocar rerun | o rerun não re-mede |
+
+Recarregar corrige, e a cena de uso — desktop, sessão deliberada — torna o
+caso raro. Fica registrado para ninguém gastar a tarde de novo.
+
+Ressalva sobre a medição: todas as tentativas foram verificadas com a viewport
+emulada. Vale confirmar com um arrasto de janela de verdade antes de tratar o
+problema como confirmado.
 
 Duas pegadinhas de cache mordem quem editar esse arquivo: o servidor estático
 do Streamlit **fixa o tamanho no start** (editar com o servidor no ar serve o

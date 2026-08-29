@@ -138,8 +138,6 @@ st.markdown("""
 
 
 LOCALIZE = Path(__file__).parent / "static" / "localize.html"
-
-
 def _localize_widgets():
     """
     Costura de idioma e acessibilidade sobre o que o Streamlit emite e não
@@ -662,6 +660,11 @@ def show_month_signal(orders_df: pd.DataFrame):
 # A barra de ferramentas do Plotly (zoom, lasso, "download plot as png") é
 # cromo de outro sistema: não serve a um painel de agregados, e em 375px ela
 # pousa POR CIMA do título do gráfico. Some — o dado fica.
+#
+# "responsive": True foi tentado aqui para o gráfico seguir a janela e NÃO
+# funciona neste arranjo: o componente do Streamlit grava layout.width na
+# figura, e o autosize do Plotly nunca chega a valer. Ver a limitação
+# registrada no DESIGN.md.
 PLOT_CONFIG = {"displayModeBar": False}
 
 
@@ -1615,7 +1618,7 @@ def main():
         # localize.html troca por um nome de verdade, junto do resto do ARIA.
         st.logo(str(LOGO), icon_image=str(ICONE), size="large")
     st.title("Histórico de pedidos")
-    _localize_widgets()  # traduz textos internos dos widgets (ex.: 'Select all')
+    _localize_widgets()  # idioma, ARIA, estado do seletor, marco e atalho
 
     # Seletor de perfil (pessoa) — bancos isolados, sem misturar pedidos
     profiles = list_profiles() or ["default"]
