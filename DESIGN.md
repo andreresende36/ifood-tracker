@@ -506,6 +506,14 @@ Um único raio para tudo: 8px (`{rounded.md}`) em botões, campos, seletores e
 blocos. Não há escala de raio, e a ausência é a decisão — variar curvatura
 entre controles do mesmo peso inventa hierarquia onde não existe.
 
+O menu de um campo segue a mesma escala: superfície elevada, fio de 1px e 8px
+de raio. Ele nascia com sombra porque a lista saía em `surface-base` sobre a
+sidebar `surface-sidebar` — 1,02:1 — e a sombra fazia o trabalho que o tom
+deveria fazer. Subindo a superfície, a sombra sai e a separação volta a ser
+tonal, como manda Elevation & Depth. Pelo mesmo motivo o campo em si é
+`surface-raised` e não `surface-base`: contra a gaveta, o preenchimento dava
+1,02:1 e o campo não era uma forma, era um contorno.
+
 A exceção é o cromo que o navegador desenha e o design system só tinge: o
 polegar da barra de rolagem (`{rounded.chrome-scrollbar}`) e o anel de foco
 (`{rounded.chrome-focus}`) seguem a curvatura da própria peça do navegador, não
@@ -626,6 +634,35 @@ digeridos a cada rerun.
 leva um WebP de 240px (5,6 KB, três vezes o tamanho de tela, para DPR alto);
 `assets/` continua com o original de 47 KB. `assets/` guarda as marcas;
 `static/` guarda o que é servido.
+
+### Seletor de perfil
+
+**Segmentado enquanto os nomes couberem lado a lado.** Trocar de pessoa é uso
+normal, não manutenção: o produto declara os dois perfis de primeira classe, e
+um menu esconde metade de um conjunto de dois — a Carol não sabe que existe uma
+Carol até clicar. Com os dois nomes à vista o gesto é um só, e morrem juntos o
+ponteiro de digitação, o cursor de texto, o anel de foco de 6px, o estado
+"Nenhum resultado" e um menu que marcava a escolha a 1,26:1.
+
+O componente não é novo: é o mesmo `st.segmented_control` do seletor de painel,
+com o estado ativo que já estava especificado em Navigation — tinta de 10% do
+vermelho, texto em Dinheiro Texto, peso 600, `aria-pressed` emitido pelo
+`localize.html`. O que mudou foi onde ele é gasto: "qual pessoa" pesa mais que
+"qual painel de análise".
+
+**Quando o menu volta.** O nome é editável em "Renomear este perfil" e nada
+impede trinta caracteres; aí o segmento trunca e o escolhedor passa a esconder
+justamente o que deveria mostrar. A regra mede antes de escolher a forma: no
+máximo três perfis **e** o nome mais longo cabendo na largura do segmento
+(`SIDEBAR_UTIL`, `SEG_VAO`, `SEG_PADDING`, `SEG_CHAR`, medidos no render). Fora
+disso, `st.selectbox`. O teto de três é do produto e não da largura: o
+PRODUCT.md define o público como um casal.
+
+**E o nome não fica só na gaveta.** O rótulo da quantia leva a pessoa —
+"Total gasto · André · Agosto de 2026". No celular a gaveta abre recolhida, e
+sem isso o número mais importante do produto é anônimo: quem senta do lado lê o
+gasto do outro como se fosse da casa. Isolamento entre pessoas é correção, e
+correção que não aparece na tela não foi entregue.
 
 ### Ledger Head
 O topo da tela, e o único lugar onde o degrau de Display aparece. Um bloco só
@@ -875,6 +912,14 @@ sinal de que havia movimento decorativo.
   `.stMarkdown p` do Streamlit ganha.
 - **Do** escolher o intervalo pelo papel — cola, base ou solta — e conferir no
   render que nenhum valor fora dos três apareceu.
+- **Do** medir se os nomes cabem antes de escolher a forma do escolhedor.
+  Segmentado mostra o conjunto; menu esconde. A forma segue o tamanho do
+  conjunto, não o hábito do framework.
+- **Do** conferir no DOM real qual atributo marca a escolha antes de estilizar
+  uma lista. O `aria-selected` do BaseWeb segue o item **realçado**, não o
+  escolhido — na abertura eles coincidem, na navegação não. E a pílula que
+  marcava a escolha era um `<div>` dentro do `<li>`, com um cinza que não
+  existe na paleta.
 - **Do** conferir se o elemento tem fundo antes de crescer o alvo com padding.
   Com tinta, o padding pinta junto e a margem negativa desloca — a área vai num
   `::after` transparente.
@@ -950,11 +995,15 @@ sinal de que havia movimento decorativo.
 - **Don't** deixar a barra de ferramentas do Plotly visível.
 - **Don't** deixar o cursor de texto piscando num escolhedor. O `st.selectbox`
   é um combobox: o valor sai num `<div>` e sobra um `<input>` de 2px colado
-  nele, e o cursor focado lê como traço solto da última letra. Com o menu
-  aberto é pior, porque é aí que se olha para o campo. Ele some em todo estado;
-  quem digitar para filtrar vê as letras, que é o retorno que importa. No
-  multiselect não se mexe: lá o input tem 18px, o cursor cai em espaço livre e
-  digitar é o caminho normal com dezenas de restaurantes.
+  nele, e o cursor focado lê como traço solto da última letra. Ele some em todo
+  estado; quem digitar para filtrar vê as letras, que é o retorno que importa.
+  No multiselect não se mexe: lá o input tem 18px, o cursor cai em espaço livre
+  e digitar é o caminho normal com dezenas de restaurantes.
+- **Don't** deixar o anel de foco pousar no `<input>` de 2px do combobox. Ele
+  vira uma lasca de ~6×24 colada no nome, no mesmo pixel do cursor que já tinha
+  sido apagado dali — trocar um traço branco por um vermelho não é conserto. O
+  anel vai na caixa (`:has(input:focus-visible)`), com o raio da caixa.
+- **Don't** escolher entre duas pessoas num menu. Ver **Seletor de perfil**.
 - **Don't** deixar o veredito do mês sem escopo ao lado de uma quantia que
   não é daquele mês. A nota de rodapé não resolve: quem lê a linha do topo não
   chega até ela.

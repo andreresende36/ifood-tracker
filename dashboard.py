@@ -528,6 +528,59 @@ st.markdown("""
     [data-testid="stDateInputField"] { color: rgba(230, 232, 236, 0.72) !important; }
     [data-testid="stDateInputField"]::placeholder { color: rgba(230, 232, 236, 0.72); }
 
+    /* A superfície do campo. O token do sistema (`input-select`) manda
+       `surface-raised`, e o BaseWeb entregava `surface-base`: preenchimento a
+       1,02:1 contra a sidebar e borda a 1,21:1 — o campo não era uma forma,
+       era um contorno que quase não existia. */
+    [data-baseweb="select"] > div, [data-baseweb="input"] > div {
+        background-color: #161b24;
+    }
+    /* Entrelinha: o campo saía em 19,6px enquanto o menu dele saía em 22,4 —
+       a mesma tipografia com dois valores, e nenhum dos dois escolhido. */
+    [data-baseweb="select"], [data-baseweb="select"] input { line-height: 22.4px; }
+
+    /* O foco pousava no <input> de 2px, não no campo: o anel de 2px do sistema
+       virava uma lasca de ~6×24 colada no nome, dentro de um alvo de 260×40 —
+       o mesmo lugar, e quase o mesmo desenho, do cursor de texto que já tinha
+       sido apagado dali. Vai para a caixa inteira, com o raio da caixa. */
+    [data-testid="stSelectbox"] input:focus-visible,
+    [data-testid="stMultiSelect"] input:focus-visible { outline: none; }
+    [data-testid="stSelectbox"]:has(input:focus-visible) [data-baseweb="select"] > div,
+    [data-testid="stMultiSelect"]:has(input:focus-visible) [data-baseweb="select"] > div {
+        outline: 2px solid #ea1d2c; outline-offset: 2px; border-radius: 8px;
+    }
+    /* Clicar em qualquer ponto do campo abre o menu, mas o ponteiro virava
+       I-beam: o sistema operacional anunciando "digite aqui" num escolhedor. */
+    [data-testid="stSelectbox"] [data-baseweb="select"],
+    [data-testid="stSelectbox"] [data-baseweb="select"] * { cursor: pointer; }
+    /* Hover não mudava nada — nem fundo, nem fio, nem chevron. */
+    [data-baseweb="select"] > div:hover { border-color: #3a4250; }
+
+    /* O menu: sem sombra, como o resto do sistema. Ela existia porque o
+       popover saía em `surface-base` sobre a sidebar `surface-sidebar` —
+       1,02:1 — e a sombra fazia o trabalho que o tom deveria fazer. Sobe para
+       `surface-raised` com fio de 1px e a separação passa a ser tonal. */
+    [data-baseweb="popover"] {
+        background-color: #161b24; box-shadow: none;
+        border: 1px solid #242a35; border-radius: 8px;
+    }
+    /* A lista interna vinha com superfície própria (`surface-base`) e passava
+       por cima da do popover; transparente, quem manda é a caixa. */
+    [data-baseweb="popover"] ul { background-color: transparent; }
+    /* A opção escolhida saía numa pílula `#95a4c1` — cinza-azulado default do
+       Streamlit, fora da paleta, marcando a escolha a 1,26:1. Vai para a mesma
+       anatomia do segmento ativo: tinta de 10% do vermelho, texto em Dinheiro
+       Texto e peso 600, para o estado não depender só de cor. */
+    [data-baseweb="popover"] li[role="option"] { padding-left: 14px; }
+    /* A pílula é um <div> DENTRO do <li>, e é ela que carregava o cinza fora
+       da paleta. Apagada, o estado passa a ser do próprio <li>. */
+    [data-baseweb="popover"] li[role="option"] > div { background-color: transparent; }
+    [data-baseweb="popover"] li[role="option"]:hover { background-color: #1e242e; }
+    [data-baseweb="popover"] li[aria-selected="true"] {
+        background-color: rgba(234, 29, 44, 0.10);
+        color: #f0787f; font-weight: 600;
+    }
+
     /* O seletor de perfil é um escolhedor, não um campo de digitar — mas o
        BaseWeb o monta como combobox: o valor sai num <div> e sobra um <input>
        de 2px logo depois dele. Focado com o menu fechado, o cursor de texto
@@ -593,8 +646,11 @@ st.markdown("""
         display: inline-flex; align-items: center; justify-content: center;
         margin: -6px -4px -6px 0;   /* cresce a área sem crescer o desenho */
     }
-    [data-baseweb="select"] svg[role="button"],
-    [data-baseweb="select"] [role="button"] > svg {
+    /* O chevron do campo: `svg[role="button"]` NÃO casa com o que o BaseWeb
+       emite — o ícone sai como `svg[data-baseweb="icon"]`, sem role, dentro de
+       um pai sem role. A regra antiga media `padding: 0px` no render: era CSS
+       morto desde sempre. */
+    [data-baseweb="select"] svg[data-baseweb="icon"] {
         box-sizing: content-box; padding: 4px; margin: -4px;
     }
 
@@ -679,9 +735,14 @@ st.markdown("""
            a área vai a 44 sem o desenho crescer: padding com margem negativa
            do mesmo tamanho. */
         [data-testid="stSlider"] [role="slider"]::after { inset: -16px; }
-        [data-baseweb="select"] svg[role="button"],
-        [data-baseweb="select"] [role="button"] > svg {
+        [data-baseweb="select"] svg[data-baseweb="icon"] {
             padding: 11px; margin: -11px;
+        }
+        /* O campo do escolhedor nascia com 40px enquanto os dois botões logo
+           abaixo dele já tinham 44: a regra de altura mira `button` e
+           `summary`, e o BaseWeb não usa nenhum dos dois. */
+        [data-baseweb="select"] > div, [data-baseweb="input"] > div {
+            min-height: 44px;
         }
         /* Botão, seletor de painel e cabeçalho de expansor: altura mínima de
            44px. O desenho não muda no desktop — nenhuma destas regras existe
@@ -1735,7 +1796,8 @@ def _periodo_label(df: pd.DataFrame) -> str:
             f"{MESES_EXTENSO[fim.month][:3]}/{fim.year}")
 
 
-def ledger_head(orders_df: pd.DataFrame, df: pd.DataFrame, items_df: pd.DataFrame):
+def ledger_head(orders_df: pd.DataFrame, df: pd.DataFrame, items_df: pd.DataFrame,
+                pessoa: str = ""):
     """
     O topo da tela é o número, não o nome da tela.
 
@@ -1757,7 +1819,15 @@ def ledger_head(orders_df: pd.DataFrame, df: pd.DataFrame, items_df: pd.DataFram
     ticket = entregues["total"].mean() if n else 0
 
     periodo = _periodo_label(entregues)
-    rotulo = "Total gasto" + (f" · {periodo}" if periodo else "")
+    # O nome entra no rótulo da quantia, e não só na gaveta: o dinheiro na
+    # tela é de UMA pessoa por vez, e no celular a gaveta abre recolhida — sem
+    # isto o número mais importante do produto é anônimo, e quem senta do lado
+    # lê o gasto do outro como se fosse da casa.
+    # O separador leva word joiner pelo mesmo motivo do SEP das legendas: se o
+    # rótulo quebrar no estreito, a linha nova começa pelo próximo fato e não
+    # pelo "·". Aqui o espaço é o normal, não o ideográfico — este é um rótulo
+    # curto, não uma fileira de fatos.
+    rotulo = " \u2060· ".join(p for p in ("Total gasto", pessoa, periodo) if p)
 
     s = month_signal(orders_df)
     veredito_html = ""
@@ -2305,15 +2375,63 @@ def orders_table(df: pd.DataFrame):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+# Largura útil da gaveta e custo de um segmento vazio (padding interno + o vão
+# entre segmentos), medidos no render a 1440px.
+SIDEBAR_UTIL = 260
+SEG_VAO, SEG_PADDING, SEG_CHAR = 8, 24, 7.2
+
+
+def _cabe_em_segmentos(nomes: list[str]) -> bool:
+    """
+    O escolhedor vira segmentado quando os nomes cabem lado a lado.
+
+    Trocar de pessoa é uso normal, não manutenção: com dois nomes à vista o
+    gesto é um só e ninguém precisa abrir um menu para descobrir que a outra
+    pessoa existe. Mas o nome é editável em "Renomear este perfil", e nada
+    impede alguém digitar trinta caracteres — aí o segmento trunca e o
+    escolhedor passa a esconder justamente o que deveria mostrar. Quando não
+    couber, o menu volta: é a forma que aguenta nome de qualquer tamanho.
+
+    O teto de três é do produto, não da largura: o PRODUCT.md define o público
+    como um casal. Um quarto perfil não é crescimento, é outro produto.
+    """
+    if not 1 < len(nomes) <= 3:
+        return False
+    largura = (SIDEBAR_UTIL - SEG_VAO * (len(nomes) - 1)) / len(nomes)
+    return max(len(n) for n in nomes) * SEG_CHAR <= largura - SEG_PADDING
+
+
+AJUDA_PERFIL = "Cada perfil é uma pessoa, com banco de dados separado."
+
+
+def _seletor_de_perfil(profiles: list[str], index: int) -> str:
+    """A pessoa cujo dinheiro a tela mostra. Segmentado quando cabe."""
+    nomes = [profile_display_name(p) for p in profiles]
+    if not _cabe_em_segmentos(nomes):
+        return st.sidebar.selectbox(
+            "Perfil", profiles, index=index,
+            format_func=profile_display_name, help=AJUDA_PERFIL,
+        )
+    escolha = st.sidebar.segmented_control(
+        "Perfil", profiles,
+        default=profiles[index],
+        format_func=profile_display_name,
+        key="perfil_seg",
+        help=AJUDA_PERFIL,
+    )
+    # segmented_control permite desmarcar; sem pessoa não há tela
+    return escolha or profiles[index]
+
+
 @st.fragment
 def resumo_e_contrafactual(orders_df: pd.DataFrame, filtered: pd.DataFrame,
-                           filtered_items: pd.DataFrame):
+                           filtered_items: pd.DataFrame, pessoa: str):
     """O topo da tela e a seção que ele anuncia, no mesmo fragmento.
 
     Uma linha só separa o resumo da análise. Entre as seções o trabalho é do
     espaço e do degrau de título — fio em toda troca de assunto vira grade.
     """
-    ledger_head(orders_df, filtered, filtered_items)
+    ledger_head(orders_df, filtered, filtered_items, pessoa)
     st.divider()
     cooking_savings(filtered, filtered_items)
 
@@ -2354,12 +2472,7 @@ def main():
     # run.sh passa o perfil escolhido por aqui; sem ele, abre no primeiro
     initial = os.environ.get("IFOOD_PROFILE", "")
     index = profiles.index(initial) if initial in profiles else 0
-    sel_profile = st.sidebar.selectbox(
-        "Perfil", profiles,
-        index=index,
-        format_func=profile_display_name,
-        help="Cada perfil é uma pessoa, com banco de dados separado.",
-    )
+    sel_profile = _seletor_de_perfil(profiles, index)
 
     # Botão de coletar/atualizar pedidos deste perfil (roda o scraper)
     if st.sidebar.button(
@@ -2431,7 +2544,8 @@ def main():
     # cima, então separá-los congelaria o número do topo enquanto o de baixo
     # anda. Juntos, arrastar o otimismo repinta só estes dois blocos — antes
     # repintava também os gráficos e a tabela, que o controle não toca.
-    resumo_e_contrafactual(orders_df, filtered, filtered_items)
+    resumo_e_contrafactual(orders_df, filtered, filtered_items,
+                           profile_display_name(sel_profile))
     temporal_charts(filtered)
     restaurant_item_charts(filtered, filtered_items)
     orders_table(filtered)
