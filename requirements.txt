@@ -1,4 +1,11 @@
-playwright>=1.44
+# Dependências do dashboard — é ESTE arquivo que o Streamlit Community Cloud
+# instala (sempre lê requirements.txt da raiz; não há campo na UI dele para
+# apontar outro nome). Por isso fica enxuto, sem playwright: dashboard.py
+# nunca importa scraper.py nem playwright, a coleta roda como subprocesso à
+# parte, e na réplica hospedada esse botão nem existe (CLOUD_MODE).
+#
+# A coleta local precisa do Playwright também — ver requirements-scraper.txt,
+# que run.sh instala à parte.
 pandas>=2.2
 streamlit>=1.35
 plotly>=5.22

@@ -212,22 +212,28 @@ já é privado. Publicar uma coleta nova é `./publish.sh`; o
 [Streamlit Community Cloud](https://share.streamlit.io) reinicia o app
 sozinho a cada push em `main`. Nada mais precisa mudar de lugar.
 
+O Streamlit Community Cloud sempre instala o `requirements.txt` da raiz — não
+há campo na UI dele para apontar outro nome. Por isso é ele quem fica enxuto
+(sem Playwright); a coleta local usa `requirements-scraper.txt` por cima, via
+`run.sh`.
+
 **Configurar uma vez (feito por você, exige login nas contas):**
 
 1. Em [share.streamlit.io](https://share.streamlit.io), "New app" → aponte
    para este repositório, branch `main`, arquivo principal `dashboard.py`.
-2. Em *Advanced settings → Python dependencies file*, aponte para
-   `requirements-cloud.txt` — a versão sem Playwright, que a réplica não usa
-   (ela nunca abre Chrome nem coleta).
-3. Em *Advanced settings → Secrets*, cole:
+   Não precisa mexer em versão de Python nem em dependências — o padrão já
+   serve.
+2. No app criado, abra **App settings → Secrets** e cole:
    ```toml
    cloud_mode = true
    ```
    É essa chave que tira "Coletar" e "Renomear" da gaveta lá — sem Chrome
-   remoto, esses botões prometeriam o que não podem cumprir.
-4. Em *Settings → Sharing*, restrinja a visualização aos e-mails de vocês
-   dois. Sem isso a URL é pública, e o dashboard mostra gasto real com nome de
-   restaurante.
+   remoto, esses botões prometeriam o que não podem cumprir. Leva cerca de um
+   minuto para propagar.
+3. Em **App settings → Sharing**, troque "Who can view this app" para **"Only
+   specific people can view this app"** e liste os e-mails de vocês dois em
+   "Invite viewers by email". Sem isso a URL é pública, e o dashboard mostra
+   gasto real com nome de restaurante.
 
 Depois disso, o ciclo normal é: coletar localmente (`./run.sh`) → publicar
 quando quiser (`./publish.sh`) → a réplica atualiza sozinha em alguns minutos.
@@ -253,8 +259,8 @@ ifood-tracker/
 ├── scraper.py            # Coleta via Playwright + interceptação da API
 ├── dashboard.py          # Dashboard Streamlit
 ├── database.py           # Camada SQLite (orders + order_items, multi-perfil)
-├── requirements.txt
-├── requirements-cloud.txt  # Idem, sem Playwright — usado pela réplica hospedada
+├── requirements.txt        # Dashboard só — é o que a nuvem instala
+├── requirements-scraper.txt  # + Playwright — só a coleta local usa
 ├── publish.sh             # git add/commit/push só de data/*.db, com confirmação
 ├── data/                 # Bancos *.db (versionados) + raw_sample*.json + logs
 ├── chrome_profile/       # Sessão Chrome do perfil default (NÃO versionado)

@@ -18,7 +18,9 @@ if [[ ! -x .venv/bin/python ]]; then
     python3 -m venv .venv
     source .venv/bin/activate
     pip install --quiet --upgrade pip
-    pip install --quiet -r requirements.txt
+    # requirements.txt é o mesmo que a réplica hospedada instala (enxuto, sem
+    # playwright); requirements-scraper.txt é só desta máquina, para coletar.
+    pip install --quiet -r requirements.txt -r requirements-scraper.txt
     playwright install chromium
 else
     source .venv/bin/activate

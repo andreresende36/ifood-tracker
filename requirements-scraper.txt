@@ -1,0 +1,3 @@
+# Só para a coleta local (scraper.py) — a réplica hospedada nunca instala
+# isto. requirements.txt cobre o dashboard; run.sh instala os dois.
+playwright>=1.44
