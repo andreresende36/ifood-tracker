@@ -139,7 +139,13 @@ st.markdown("""
         mask-image: linear-gradient(to bottom,
                     #000 0%, #000 55%, transparent 100%);
     }
-    @media (max-width: 575.98px) {
+    /* 864px é a fronteira do próprio Streamlit: abaixo dela o padding lateral
+       do `.block-container` cai de 80px para 16px. A capa continuava
+       cancelando 80px de cada lado, então em 768px ela ficava 128px mais larga
+       que a janela e a PÁGINA INTEIRA deslizava de lado — a rolagem
+       horizontal que nenhum leitor de tablet pediu. O cancelamento acompanha
+       o padding que existe de fato. */
+    @media (max-width: 863.98px) {
         .capa { margin-left: -1rem; margin-right: -1rem; }
     }
 
@@ -538,10 +544,11 @@ st.markdown("""
        saiu dos botões. */
     label[data-baseweb="checkbox"] > span:first-child { background-color: #161b24; }
 
-    /* Alvos de toque. O ✕ de um chip de filtro nasce com 8,8×8,8 e os ícones
-       de "limpar tudo" com 21×21 — a área que a WCAG 2.5.8 (AA) exige é
-       24×24. Os 44×44 do AAA não cabem num chip de 28px sem redesenhar o
-       widget do Streamlit, e a cena de uso é desktop com mouse; 24 é o alvo. */
+    /* Alvos de toque, o piso. O ✕ de um chip de filtro nasce com 8,8×8,8 e os
+       ícones de "limpar tudo" com 21×21 — a área que a WCAG 2.5.8 (AA) exige
+       é 24×24. Este é o valor do PONTEIRO FINO: com mouse, 24 basta e o
+       widget não precisa ser redesenhado. O dedo tem outro tamanho, e o que
+       ele pede está no bloco `pointer: coarse` lá embaixo. */
     [data-baseweb="tag"] { min-height: 26px; }
     /* O polegar do slider nasce com 12x12. A área cresce, o desenho não. */
     [data-testid="stSlider"] [role="slider"] {
@@ -555,6 +562,137 @@ st.markdown("""
     [data-baseweb="select"] svg[role="button"],
     [data-baseweb="select"] [role="button"] > svg {
         box-sizing: content-box; padding: 4px; margin: -4px;
+    }
+
+    /* ── Tela estreita e dedo ─────────────────────────────────────────────
+       A cena de uso continua sendo o casal na mesma tela em casa, e o
+       desktop é onde ela acontece — nada aqui muda o que já está resolvido lá.
+       O que muda é que a mesma tela agora é aberta no celular e no tablet, e
+       nesses dois o painel tinha três problemas de verdade, todos medidos no
+       render: a página deslizava de lado, o par de gráficos ficava com 360px
+       por gráfico (e o trio, com 235px), e todo alvo de toque era do tamanho
+       do mouse.
+
+       As duas fronteiras não são de catálogo, são do que existe aqui:
+
+         864px  onde o próprio Streamlit troca o padding lateral de 80px por
+                16px — a tela deixa de ter margem para gastar.
+         640px  onde ele para de empilhar as colunas lado a lado. Abaixo
+                disso, o layout já é uma coluna só e não há par a desfazer.
+
+       E o dedo entra por `pointer: coarse`, não por largura: um tablet em
+       paisagem tem 1024px e continua sendo dedo, enquanto uma janela estreita
+       no desktop continua sendo mouse. Largura decide layout; ponteiro decide
+       alvo. */
+
+    @media (max-width: 863.98px) {
+        /* A tabela guarda a largura que tinha antes de o aparelho girar, e uma
+           tabela de 746px numa coluna de 343px é a página inteira deslizando
+           de lado. Presa à coluna, a grade se remede sozinha (o canvas volta
+           a 341px) e volta a rolar por dentro, que é onde a rolagem lateral
+           pode existir. O `!important` é contra a largura em linha que o
+           próprio componente escreve. */
+        [data-testid="stDataFrame"] { max-width: 100%; }
+        [data-testid="stDataFrameResizable"] { max-width: 100% !important; }
+        /* O gráfico guarda a largura em que foi desenhado (`layout.width`, a
+           limitação documentada no DESIGN.md), e no celular quem dispara isso
+           não é arrastar a janela — é GIRAR o aparelho. Voltando de paisagem
+           para retrato, um gráfico de 780px fica dentro de uma coluna de
+           343px. Ele rola por dentro da própria caixa; o que não pode é a
+           página inteira deslizar de lado atrás dele. */
+        [data-testid="stPlotlyChart"] { overflow-x: auto; }
+        /* Trava de segurança para o resto: o rótulo que o Plotly escreve fora
+           da área de plotagem (`cliponaxis=False`) invade a margem, e aqui a
+           margem é de 16px. No desktop sobra respiro para isso; aqui, sem a
+           trava, alguns pixels de um número empurram a página inteira.
+           Rolagem lateral de página é sempre defeito — a de dentro de um
+           gráfico ou de uma tabela, não. */
+        [data-testid="stMain"] { overflow-x: hidden; }
+        /* O título de seção entra na mesma escala fluida da placa. A 28px em
+           375px, "E se você tivesse cozinhado em casa?" ocupa três linhas. */
+        .block-container h2 { font-size: clamp(22px, 2.2vw + 12px, 28px); }
+    }
+
+    /* Entre 640 e 864 — o tablet em retrato — o Streamlit ainda põe tudo lado
+       a lado, e é aí que o layout do desktop se desfaz: três gráficos com
+       235px cada, quatro KPIs com 172px. O par e o trio de gráficos passam a
+       ocupar a largura inteira, um debaixo do outro; os KPIs viram grade de
+       dois, que é o formato em que o rótulo ainda cabe em cima do valor. */
+    @media (min-width: 641px) and (max-width: 863.98px) {
+        [data-testid="stHorizontalBlock"]
+          > [data-testid="stColumn"]:has([data-testid="stPlotlyChart"]),
+        [data-testid="stHorizontalBlock"]
+          > [data-testid="stColumn"]:has([data-testid="stDataFrame"]) {
+            flex: 1 1 100%;
+            min-width: 100%;
+        }
+        /* 0.5rem é metade do gap de 16px do bloco horizontal: dois por linha
+           com o vão entre eles descontado uma vez só. */
+        [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"])
+          > [data-testid="stColumn"] {
+            flex: 1 1 calc(50% - 0.5rem);
+            min-width: calc(50% - 0.5rem);
+        }
+    }
+
+    /* No celular o KPI fica um por linha, como o Streamlit já faz: numa coluna
+       de 163px, "R$ 10.201,76" a 26,4px não cabe, e o produto falha se o
+       número não couber. Uma coluna, o número inteiro. */
+
+    @media (pointer: coarse) {
+        /* 44×44 é o alvo do AAA (WCAG 2.5.8) e é o que o dedo pede. Onde o
+           controle é solto — polegar do slider, seta de um campo, botão —
+           a área vai a 44 sem o desenho crescer: padding com margem negativa
+           do mesmo tamanho. */
+        [data-testid="stSlider"] [role="slider"] {
+            padding: 16px; margin: -16px;
+        }
+        [data-baseweb="select"] svg[role="button"],
+        [data-baseweb="select"] [role="button"] > svg {
+            padding: 11px; margin: -11px;
+        }
+        /* Botão, seletor de painel e cabeçalho de expansor: altura mínima de
+           44px. O desenho não muda no desktop — nenhuma destas regras existe
+           lá. */
+        .block-container button, [data-testid="stSidebar"] button,
+        [data-testid="stExpander"] summary {
+            min-height: 44px;
+        }
+        /* O "?" da ajuda nasce com 16×16 e é a única maneira de ler a nota
+           que ele guarda — no mouse ela aparece no hover, no dedo só no
+           toque. A área vai a 24 sem o ícone crescer. */
+        [data-testid="stTooltipHoverTarget"] {
+            box-sizing: content-box; padding: 4px; margin: -4px;
+        }
+        /* A caixa do checkbox tem 16px; quem recebe o toque é a linha inteira
+           do rótulo. */
+        label[data-baseweb="checkbox"] { min-height: 44px; align-items: center; }
+        /* O ✕ do chip é a exceção, e é uma exceção de forma: 44 não cabe num
+           chip sem transformar o filtro numa fileira de botões. Ele cresce o
+           quanto o chip permite — 36 no lugar de 24 —, e o chip cresce junto
+           para o alvo não vazar por cima do vizinho. */
+        [data-baseweb="tag"] { min-height: 36px; }
+        [data-baseweb="tag"] span[role="presentation"] {
+            min-width: 36px; min-height: 36px;
+            margin: -6px -6px -6px 0;
+        }
+        /* Abrir e fechar a barra de filtros é o gesto mais frequente do
+           celular — ali a barra nasce recolhida — e o controle nasce com
+           28×28 dentro de um cabeçalho de 56px. */
+        /* Um é botão, o outro é a caixa em volta de um botão — os dois
+           seletores existem porque o Streamlit pendura o `data-testid` em
+           lugares diferentes de cada lado do gesto. */
+        button[data-testid="stExpandSidebarButton"],
+        [data-testid="stSidebarCollapseButton"] button {
+            width: 44px; height: 44px;
+        }
+    }
+
+    /* Sem hover não há descoberta: a barra de ferramentas da tabela (buscar,
+       baixar, tela cheia) vive em opacidade 0 até o mouse chegar, e no dedo
+       o mouse nunca chega. Onde não há hover, ela fica visível. */
+    @media (hover: none) {
+        [data-testid="stElementToolbar"] { opacity: 1; }
     }
 
     /* iframe utilitário do localize.html — carrega e roda, mas não ocupa espaço */

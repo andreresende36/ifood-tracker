@@ -411,7 +411,52 @@ ali calcula área negativa.
 
 No estreito a sidebar recolhe sozinha (`initial_sidebar_state="auto"`);
 expandida ela cobriria a tela e a primeira coisa visível seriam filtros, não
-dados.
+dados. Recolhida, ela é uma gaveta de 300px sobre uma tela de 375 — o naco de
+conteúdo que sobra ao lado é o que diz que aquilo é uma camada, e por isso ela
+não vira largura cheia.
+
+### Tela estreita e dedo
+
+O desktop é a cena de uso e nada nele muda. O que existe são duas fronteiras
+de largura, as duas tiradas do próprio Streamlit, e um eixo separado para o
+ponteiro:
+
+| fronteira | o que é |
+|---|---|
+| **864px** | onde o Streamlit troca o padding lateral de 80px por 16px |
+| **640px** | onde ele para de pôr as colunas lado a lado |
+| `pointer: coarse` | dedo, em qualquer largura |
+
+**A Regra das Duas Perguntas.** Largura decide layout; ponteiro decide alvo.
+São perguntas diferentes e não se respondem uma pela outra: um tablet em
+paisagem tem 1024px e continua sendo dedo; uma janela estreita no desktop
+continua sendo mouse.
+
+**Abaixo de 864px** o sangramento da capa vale 16px, não 80 — o cancelamento
+acompanha o padding que existe de fato, senão a capa fica 128px mais larga que
+a janela e a página inteira desliza de lado. O título de seção entra na mesma
+escala fluida da placa (`clamp(22px, 2.2vw + 12px, 28px)`). Gráfico e tabela
+ganham rolagem lateral **por dentro da própria caixa**, e a coluna de conteúdo
+deixa de rolar de lado: rolagem horizontal de página é sempre defeito; a de
+dentro de um gráfico ou de uma tabela, não.
+
+**Entre 640 e 864px** — o tablet em retrato — é onde o layout do desktop se
+desfaz sem avisar: o trio de gráficos cai para 235px cada e os quatro KPIs
+para 172px. Ali o par e o trio passam a ocupar a largura inteira, um debaixo
+do outro, e os KPIs viram grade de dois.
+
+**Abaixo de 640px** o KPI fica um por linha, como o Streamlit já faz. Numa
+coluna de 163px, `R$ 10.201,76` a 26,4px não cabe — e o produto falha se o
+número não couber.
+
+**No dedo** o alvo é 44×44 (WCAG 2.5.8 AAA): polegar do slider, seta de campo,
+botão, cabeçalho de expansor, linha de checkbox e os dois controles da gaveta
+de filtros, que no celular é o gesto mais frequente da tela. A área cresce por
+padding com margem negativa do mesmo tamanho — o desenho não muda. O ✕ do chip
+é a exceção declarada: 44 não cabe num chip sem transformar o filtro numa
+fileira de botões, então ele vai a 36 e o chip cresce junto, para o alvo não
+vazar por cima do vizinho. E onde não há hover, a barra de ferramentas da
+tabela deixa de ser invisível: sem mouse não há descoberta.
 
 ## Elevation & Depth
 
@@ -711,12 +756,22 @@ Quatro caminhos foram testados e nenhum vence:
 | `config: {responsive: true}` | o autosize nunca vale, com `layout.width` posto |
 | componente devolvendo a largura, para provocar rerun | o rerun não re-mede |
 
-Recarregar corrige, e a cena de uso — desktop, sessão deliberada — torna o
-caso raro. Fica registrado para ninguém gastar a tarde de novo.
+Recarregar corrige. Fica registrado para ninguém gastar a tarde de novo.
 
-Ressalva sobre a medição: todas as tentativas foram verificadas com a viewport
-emulada. Vale confirmar com um arrasto de janela de verdade antes de tratar o
-problema como confirmado.
+**No celular quem dispara isso não é arrastar a janela — é girar o aparelho**,
+e aí o caso deixa de ser raro. Medido em 29/08/2026: girando de 812×375 para
+375×812 sem recarregar, o container vai a 343px e o SVG fica em 780. As duas
+consequências foram contidas, não corrigidas — o gráfico rola por dentro da
+própria caixa em vez de empurrar a página, e a tabela é presa à coluna
+(`stDataFrameResizable`, `max-width: 100% !important`), com o que a grade se
+remede sozinha e o canvas volta a acompanhar a coluna. O gráfico continua
+desenhado na largura antiga até o próximo rerun.
+
+Sobre a medição: tudo foi verificado com viewport emulada, mas a ressalva de
+antes perdeu força — no mesmo giro as media queries do Streamlit trocaram o
+padding e as colunas se re-empilharam, ou seja, o layout do navegador reagiu.
+Só `layout.width` do Plotly não. `Plotly.Plots.resize` e `Plotly.relayout`
+foram chamados de novo, na figura viva, e nenhum dos dois moveu o SVG.
 
 Duas pegadinhas de cache mordem quem editar esse arquivo: o servidor estático
 do Streamlit **fixa o tamanho no start** (editar com o servidor no ar serve o

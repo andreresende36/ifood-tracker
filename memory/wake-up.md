@@ -38,18 +38,35 @@ Nove commits, todos em `main` e no remoto:
 
 ## O que fazer a seguir
 
-**1. Confirmar se o reflow de gráfico é bug de verdade.** É a única coisa
-esperando alguém.
+**1. Reflow de gráfico: confirmado (29/08/2026).** Girando 812×375 → 375×812
+sem recarregar, o container do gráfico foi a 343px e o SVG ficou em 780. No
+mesmo giro o Streamlit trocou o padding lateral e re-empilhou as colunas — o
+layout do navegador reagiu, só o `layout.width` do Plotly não. `Plotly.Plots.
+resize` e `Plotly.relayout` foram chamados na figura viva e nenhum moveu o SVG.
+A tabela do `DESIGN.md` fica onde está.
 
-Abra com `./run.sh`, role até um gráfico e **arraste a borda da janela**.
+O que mudou é o alcance: no celular o gatilho é a **rotação**, não o arrasto de
+janela. As duas consequências foram contidas na rodada de `adapt` (o gráfico
+rola por dentro, a tabela é presa à coluna e se remede). O gráfico continua
+desenhado na largura antiga até o próximo rerun — não há conserto, só
+contenção.
 
-- Se o gráfico redesenhar na largura nova → **não há bug.** Apague a tabela
-  "Limitação conhecida — o gráfico não segue a janela" do `DESIGN.md`.
-- Se ficar na largura antiga até recarregar → está confirmado, e a tabela com
-  as cinco tentativas fica onde está.
+**1b. `/impeccable adapt` está no working tree, sem commit.** Celular e tablet,
+desktop intocado (verificado a 1440: ponteiro fino, padding 80px, capa −80px,
+h2 28px, 4 KPIs lado a lado, nenhuma regra nova ativa).
 
-Tudo foi medido com viewport emulada, que pode não disparar o `ResizeObserver`
-do Streamlit. Por isso a dúvida.
+- Fronteiras: 864px (onde o Streamlit troca o padding lateral) e 640px (onde
+  ele para de empilhar colunas lado a lado); `pointer: coarse` para o dedo.
+- Corrigido um defeito real: abaixo de 864px a capa cancelava 80px de padding
+  que não existiam mais e a página deslizava de lado (832px de conteúdo numa
+  janela de 768).
+- Tablet em retrato: par e trio de gráficos passam a ocupar a largura inteira
+  (eram 360px e 235px por gráfico); KPIs viram grade de dois.
+- Dedo: 44×44 em slider, campos, botões, expansor, checkbox e nos dois
+  controles da gaveta de filtros; ✕ do chip a 36 (exceção declarada); barra de
+  ferramentas da tabela visível onde não há hover.
+- `DESIGN.md`: subseção "Tela estreita e dedo" em Layout, mais a Regra das
+  Duas Perguntas.
 
 **2. O cabeçalho-extrato está no working tree, sem commit.** Rodada de
 `/impeccable bolder` sobre a tela inteira. O movimento é um só: o degrau de
