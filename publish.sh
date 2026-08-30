@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Publica o banco local na nuvem: comita e empurra SÓ data/*.db e
-# data/profiles.json. A réplica hospedada não escreve nada — ela só existe
-# porque este script mandou dado novo para o repo, e o Streamlit Community
-# Cloud reinicia o app sozinho a cada push em main.
+# Publica o banco local na nuvem: comita e empurra SÓ data/*.db,
+# data/profiles.json e data/raw_sample*.json. A réplica hospedada não escreve
+# nada — ela só existe porque este script mandou dado novo para o repo, e o
+# Streamlit Community Cloud reinicia o app sozinho a cada push em main.
 #
 # Roda depois de uma coleta (./run.sh), quando você quiser que a versão da
 # nuvem passe a mostrar o dado novo. Nunca roda sozinho.
@@ -12,7 +12,11 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-ALVOS=(data/orders.db data/carol.db data/profiles.json)
+# O JSON cru da última coleta sobe junto com o banco: ele é a prova de
+# origem de cada número, e sem ele a réplica hospedada guarda o dado derivado
+# sem o que o gerou. O glob pega qualquer perfil novo sozinho; se nenhum
+# arquivo casar, o filtro de -f logo abaixo descarta o padrão literal.
+ALVOS=(data/orders.db data/carol.db data/profiles.json data/raw_sample*.json)
 EXISTENTES=()
 for f in "${ALVOS[@]}"; do
     [[ -f "$f" ]] && EXISTENTES+=("$f")

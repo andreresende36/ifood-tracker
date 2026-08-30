@@ -195,8 +195,9 @@ git add data/*.db && git commit -m "update pedidos" && git push
 `git add -A` é seguro — o `.gitignore` impede que as sessões do Chrome vazem.
 
 Se a réplica hospedada (seção abaixo) estiver no ar, use `./publish.sh` em vez
-do comando acima: ele só toca em `data/*.db` e `data/profiles.json`, mostra o
-que vai mudar e pede confirmação antes de empurrar.
+do comando acima: ele só toca em `data/*.db`, `data/profiles.json` e
+`data/raw_sample*.json`, mostra o que vai mudar e pede confirmação antes de
+empurrar.
 
 ---
 
@@ -261,7 +262,7 @@ ifood-tracker/
 ├── database.py           # Camada SQLite (orders + order_items, multi-perfil)
 ├── requirements.txt        # Dashboard só — é o que a nuvem instala
 ├── requirements-scraper.txt  # + Playwright — só a coleta local usa
-├── publish.sh             # git add/commit/push só de data/*.db, com confirmação
+├── publish.sh             # git add/commit/push só dos dados de data/, com confirmação
 ├── data/                 # Bancos *.db (versionados) + raw_sample*.json + logs
 ├── chrome_profile/       # Sessão Chrome do perfil default (NÃO versionado)
 └── profiles/             # Sessões Chrome dos demais perfis (NÃO versionado)
