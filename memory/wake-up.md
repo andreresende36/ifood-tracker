@@ -12,6 +12,11 @@ metade do trabalho abaixo).
 
 ## Onde estamos
 
+Em 30/08 saiu o que estava represado: cinco commits locais nunca tinham sido
+empurrados, entre eles o conserto da capa e do wordmark na réplica hospedada —
+o defeito da captura do André não era código, era código que a nuvem não
+tinha. `publish.sh` passou a mandar os `raw_sample*.json` junto com os bancos.
+
 Em 29/08, depois da coleta, entraram **optimize**, **polish** e uma
 **critique** de componente único — o seletor de perfil, que o André apontou
 três vezes como feio e que acabou trocando de forma. Antes delas, na mesma
@@ -45,6 +50,8 @@ Nove commits, todos em `main` e no remoto:
 | `3605721` | polegar do slider volta a 12px e ao centro da trilha |
 | `0fa6b51` | cursor de texto some do seletor de perfil |
 | `39313e0` | perfil vira segmentado, nome entra na quantia, furos de sistema |
+| `d1c8edc` | Logo e capa em base64 na nuvem — só chegou lá em 30/08 |
+| `b61f625` | `publish.sh` publica os `raw_sample*.json` junto (30/08) |
 
 ---
 
@@ -353,6 +360,13 @@ abertas estão no topo desta seção.
 ---
 
 ## Armadilhas que vão morder de novo
+
+**Defeito na réplica hospedada pode ser commit parado.** O Streamlit
+Community Cloud só redeploya no push; um conserto commitado e não empurrado
+deixa a nuvem rodando o código velho, com o sintoma idêntico ao do bug
+original. Confira `git status -sb` contra `origin/main` ANTES de reinvestigar
+um bug já corrigido. E leia o `-sb` do git de verdade: a contagem de "ahead"
+da saída filtrada disse 1 quando eram 5.
 
 **`aria-selected` do BaseWeb segue o item REALÇADO, não o escolhido.** Numa
 lista de opções, quem marca a escolha é uma pílula que é um `<div>` DENTRO do
