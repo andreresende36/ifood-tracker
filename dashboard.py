@@ -20,7 +20,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from database import (
-    Database, DAY_NAMES, MONTH_NAMES,
+    Database, DAY_NAMES, MONTH_NAMES, db_path_for,
     list_profiles, profile_display_name, set_profile_display_name,
 )
 
@@ -982,16 +982,31 @@ def _brl(valor: float, casas: int = 2, md: bool = False) -> str:
 
 # ── Data loading ──────────────────────────────────────────────────────────────
 
-# Sem ttl: o banco é um arquivo local que só muda quando alguém coleta, e tanto
-# "Coletar" quanto "Recarregar" chamam load_data.clear(). O ttl de 60s não
+# Sem ttl: `_load_data` invalida sozinho pelo mtime do .db (ver `_db_mtime`),
+# então "Coletar" e "Recarregar" e coleta externa (scraper.py, publish.sh)
+# já pegam o banco novo sem precisar de nada manual. O ttl de 60s não
 # protegia de nada e criava uma janela em que "Recarregar" podia não recarregar.
 # O perfil conjunto não é um banco: é a leitura dos dois. A chave não pode
 # colidir com nome de arquivo em data/, daí os underscores.
 CASAL = "__casal__"
 
 
-@st.cache_data
+def _db_mtime(profile: str) -> float:
+    """mtime do(s) .db do perfil — vira parte da chave de cache abaixo, então
+    o cache invalida sozinho quando o arquivo muda, mesmo se a coleta rodou
+    fora do dashboard (scraper.py direto, ou publish.sh + redeploy)."""
+    if profile == CASAL:
+        return max((_db_mtime(p) for p in list_profiles() if p != CASAL), default=0.0)
+    path = db_path_for(profile)
+    return path.stat().st_mtime if path.exists() else 0.0
+
+
 def load_data(profile: str = "default"):
+    return _load_data(profile, _db_mtime(profile))
+
+
+@st.cache_data
+def _load_data(profile: str, _mtime: float):
     if profile == CASAL:
         return _load_casal()
     db = Database(profile=profile)
@@ -1051,8 +1066,12 @@ def reload():
     antes de `load_data(sel_profile)`, então limpar o cache aqui já faz a
     leitura desta mesma execução pegar o banco novo. Uma execução em vez de
     duas.
+
+    Redundante com a invalidação por mtime de `_load_data` (que cobre coleta
+    rodada fora do dashboard), mas dois `st.rerun()` no mesmo segundo têm o
+    mesmo mtime — sem isso o segundo ficaria com cache velho.
     """
-    load_data.clear()
+    _load_data.clear()
 
 
 # ── Sidebar filters ───────────────────────────────────────────────────────────
@@ -2382,7 +2401,7 @@ def run_scraper(profile: str):
 
     # Sem `st.rerun()` pela mesma razão do reload(): ele interrompe o script
     # antes dos filtros existirem e o Streamlit descarta o estado deles.
-    load_data.clear()
+    _load_data.clear()
     st.toast("Dados atualizados!" if ok else "Coleta finalizada com avisos.")
 
 
