@@ -16,8 +16,9 @@
     "shortId": "6652",
     "orderNumber": "6652",
     "createdAt": "2026-08-29T21:41:49-03:00",
-    "updatedAt": "2026-08-29T21:41:55-03:00",
-    "lastStatus": "CONFIRMED",
+    "updatedAt": "2026-08-29T22:03:15-03:00",
+    "closedAt": "2026-08-29T22:03:15-03:00",
+    "lastStatus": "CONCLUDED",
     "details": {
       "mode": "DELIVERY",
       "scheduled": false,
@@ -45,23 +46,66 @@
         "reference": "Primeira porta de vidro a direita (interfonar)",
         "complement": "Apto 301D"
       },
+      "driver": {
+        "name": "Julio max",
+        "modal": "MOTORCYCLE",
+        "isSuperDriver": false
+      },
       "estimatedTimeOfArrival": {
         "deliversAt": "2026-08-29T22:06:49-03:00",
-        "updatedAt": "2026-08-29T21:41:55-03:00",
+        "updatedAt": "2026-08-29T22:03:15-03:00",
         "deliversEndAt": "2026-08-29T22:16:49-03:00"
       },
       "expectedDeliveryTime": "2026-08-29T22:06:49-03:00",
       "expectedDuration": 1500,
       "expectedDeliveryTimeEnd": "2026-08-29T22:16:49-03:00",
-      "isFullService": false
+      "isFullService": true
     },
     "deliveryOperation": {
       "executions": [
         {
           "deliveryRequestId": "fa1e9531-6ddc-3efd-87e2-c0764dbe60b6",
-          "lastState": "CREATED",
-          "lastStateAt": "2026-08-29T21:41:55-03:00",
-          "timeline": [],
+          "lastState": "COMPLETED",
+          "lastStateAt": "2026-08-29T22:03:15-03:00",
+          "timeline": [
+            {
+              "events": [
+                {
+                  "value": "DELIVERY_GOING_TO_ORIGIN",
+                  "timestamp": "2026-08-29T21:56:31-03:00",
+                  "metadata": {
+                    "isSuperDriver": false
+                  }
+                },
+                {
+                  "value": "DELIVERY_ACCEPTED",
+                  "timestamp": "2026-08-29T21:56:31-03:00",
+                  "metadata": {
+                    "driverName": "Julio max",
+                    "modal": "MOTORCYCLE",
+                    "isTrackable": true,
+                    "isSuperDriver": false
+                  }
+                },
+                {
+                  "value": "DELIVERY_ARRIVED_AT_ORIGIN",
+                  "timestamp": "2026-08-29T21:56:38-03:00"
+                },
+                {
+                  "value": "DELIVERY_GOING_TO_DESTINATION",
+                  "timestamp": "2026-08-29T21:57:37-03:00",
+                  "metadata": {
+                    "isTrackable": true,
+                    "isSuperDriver": false
+                  }
+                },
+                {
+                  "value": "DELIVERY_ARRIVED_AT_DESTINATION",
+                  "timestamp": "2026-08-29T22:01:45-03:00"
+                }
+              ]
+            }
+          ],
           "deliveryParameters": {
             "logisticProvider": "MERCHANT",
             "deliveryProduct": "SELF_DELIVERY",
