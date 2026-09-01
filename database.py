@@ -10,6 +10,11 @@ DB_PATH = Path("data/orders.db")
 DATA_DIR = Path("data")
 PROFILE_NAMES_FILE = DATA_DIR / "profiles.json"
 
+# Chave do perfil conjunto (leitura combinada de todos os bancos, não um banco
+# em si). Não pode colidir com nome de arquivo em data/, daí os underscores.
+# Compartilhada entre dashboard.py e run.sh — um só lugar de verdade.
+CASAL = "__casal__"
+
 DAY_NAMES = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 MONTH_NAMES = [
     "", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",

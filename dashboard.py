@@ -20,7 +20,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from database import (
-    Database, DAY_NAMES, MONTH_NAMES, db_path_for,
+    Database, DAY_NAMES, MONTH_NAMES, CASAL, db_path_for,
     list_profiles, profile_display_name, set_profile_display_name,
 )
 
@@ -986,9 +986,8 @@ def _brl(valor: float, casas: int = 2, md: bool = False) -> str:
 # então "Coletar" e "Recarregar" e coleta externa (scraper.py, publish.sh)
 # já pegam o banco novo sem precisar de nada manual. O ttl de 60s não
 # protegia de nada e criava uma janela em que "Recarregar" podia não recarregar.
-# O perfil conjunto não é um banco: é a leitura dos dois. A chave não pode
-# colidir com nome de arquivo em data/, daí os underscores.
-CASAL = "__casal__"
+# O perfil conjunto não é um banco: é a leitura dos dois. CASAL vem de
+# database.py — run.sh usa a mesma chave para abrir o dashboard já nele.
 
 
 def _db_mtime(profile: str) -> float:
