@@ -1,5 +1,322 @@
 [
   {
+    "id": "69b5f286-970c-4c02-9173-c2c2ce5a7499",
+    "shortId": "2834",
+    "orderNumber": "2834",
+    "createdAt": "2026-09-10T16:26:38-03:00",
+    "updatedAt": "2026-09-10T17:00:09-03:00",
+    "closedAt": "2026-09-10T17:00:08-03:00",
+    "lastStatus": "CONCLUDED",
+    "details": {
+      "mode": "DELIVERY",
+      "scheduled": false,
+      "tippable": true,
+      "indoorTipEnabled": false,
+      "trackable": true,
+      "boxable": false,
+      "placedAtBox": false,
+      "reviewed": false,
+      "darkKitchen": false
+    },
+    "delivery": {
+      "address": {
+        "establishment": "",
+        "city": "Brasília",
+        "country": "BR",
+        "neighborhood": "Asa Sul",
+        "state": "DF",
+        "streetName": "SHCS, SQS 410, BL M",
+        "streetNumber": "Sem número",
+        "coordinates": {
+          "latitude": -15.82544,
+          "longitude": -47.904975
+        },
+        "reference": "Primeira porta de vidro a direita (interfonar)",
+        "complement": "Apto 301D"
+      },
+      "driver": {
+        "id": "73961bc5-416a-4edd-8e4a-6cef885f43fe",
+        "name": "Antonio M.",
+        "photoUrl": "https://s3.amazonaws.com/logistics-driver-account-production/static/drivers/photo/73961bc5-416a-4edd-8e4a-6cef885f43fe.png?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMP%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJIMEYCIQD3tuf910AiUTocwMkF7Wo8I7qDx%2B4%2F4is8g768aCS53wIhAN8%2ByxJiQoVkf%2FsEn%2FaoBBLRserpxWJZ3d7lp8E3CF7GKvgFCIv%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMNzM5NDY0NzUwNDAxIgzFIR1W7QxQZdSUkpIqzAWE54fk6dFu026Oa9pZtD6fuy%2BslG9e5XFreCtgvHuv470JxDXP5KayXWcRPZQDTNygf%2FolV3%2BaH9k4HlUEZzR4YTrbap3gybF%2F6wb%2BW0scEgMMeH0O9x681rnufMZ4ssAuNMfi2upUXYWeCmBNcSsULyzEjdbiCtF6zR81CMe6TwpQP1pjBIIg8Qp%2BBozKk%2BZZ8yw94L5Ld2jxEPQAAvhv4jzeWyO6S%2FOMa%2F9ptxdZGoZTHRKFKdy5%2F%2FvVeDkjXlcT0suN8DWLZ4zFRl6AGnCmiT98w91lEyBs%2FIARcLHHi9xt2O8mKtcQxoZaSNET%2B8LxRedVDs76s%2BrRFPEIiB2gAdjIdVHai3sk0FGD0GLkl52%2Bi5qt2rEpSf05LRsyALb%2B83H8p6OlMV7R03l2Py1I8NRvcatLSSLn%2Bj45YJBFPxcoBR%2FJ5grPiLFWoGZsHbfrdsvvvUkZhLxz%2FI9EAySHFqdBnTd49g2YTc32uuzKyk69PwPTpe6xVM%2FmLZwXs69wUFFEQfnxia7tqVBmZBFs0otSpOX0ltosixtO7uB79fZSVhEp999PnvXpazJ0l%2F%2Bhom7K8w%2BmbdePm1RAM2XEQiUzWuqI3h88miM3SL7Q3LcyZrhjUTtYYXyll3TwP1iGTZUf%2B4V8Wo3RVe6IYayUeID2G25uICB9tQC66gAQ0Ps1w0TC6UxTj7Iz%2Fxhm4XoQH5YyWvBkU1G3ZPTGH7tJmRkDvn3ne8BK1vfTtSMjAaDtpzfZ%2FlUOybG5rYArjUeUwFDXH4CtZLZwa6FS3gRVOi9gmfXeD0B2EaWT9dcAmb0I92%2BP6tNnCwzOlr4fwxjrlwF0HQgmSipJC6A4bdm1jpjRUB%2FQnpLB3bOzgKxumTQDBcIRsrW%2BMJDrDz9cLFaad421T9oWWZGCs9VyAIZQEbeot5k4aFq1IJ6zbsqIiKRI9Bfad7udbnB3cDCE5ovVBjqPARyJxhwgAH4M18Tf%2FXWB8vXnYKxvr7OEzBvm7E0kjOxEJnqZUkJG%2Bc0CEGOjdZwLeKvw0H8%2FPP%2FxEtNl2fexhPGpmglyyAtkNiTU9Uw12fnUylhUFdq8q7lD7nfk1qlD%2BmA8gJZ4zzweqMe3ItKBXogMdExrVhiRQmYoQWkvf%2FoHXScwVsoN0reHiDwIisep&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260910T194644Z&X-Amz-SignedHeaders=host&X-Amz-Expires=3600&X-Amz-Credential=ASIA2YK4IUVAZAHLS4BO%2F20260910%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=65396e462095c4bbc61becd6c5350d0c2d11b6ff305118ba0c80cb991cb21f03",
+        "modal": "MOTORCYCLE",
+        "isSuperDriver": false
+      },
+      "estimatedTimeOfArrival": {
+        "deliversAt": "2026-09-10T16:58:38-03:00",
+        "updatedAt": "2026-09-10T17:00:09-03:00",
+        "deliversEndAt": "2026-09-10T17:13:38-03:00"
+      },
+      "expectedDeliveryTime": "2026-09-10T16:58:38-03:00",
+      "expectedDuration": 1920,
+      "expectedDeliveryTimeEnd": "2026-09-10T17:13:38-03:00",
+      "isFullService": true
+    },
+    "deliveryOperation": {
+      "executions": [
+        {
+          "deliveryRequestId": "690b7ee0-3fd4-3215-9051-98db043c250a",
+          "lastState": "COMPLETED",
+          "lastStateAt": "2026-09-10T17:00:08-03:00",
+          "timeline": [
+            {
+              "deliveryId": "0d79d75f-782c-3e12-87be-10f126ca709f",
+              "deliveryType": "MAIN",
+              "events": [
+                {
+                  "value": "DELIVERY_CREATED",
+                  "timestamp": "2026-09-10T16:26:43-03:00",
+                  "metadata": {
+                    "tippable": true
+                  }
+                },
+                {
+                  "value": "DELIVERY_GOING_TO_ORIGIN",
+                  "timestamp": "2026-09-10T16:46:43-03:00",
+                  "metadata": {
+                    "isSuperDriver": false
+                  }
+                },
+                {
+                  "value": "DELIVERY_ACCEPTED",
+                  "timestamp": "2026-09-10T16:46:43-03:00",
+                  "metadata": {
+                    "driverName": "Antonio M.",
+                    "workerUUID": "73961bc5-416a-4edd-8e4a-6cef885f43fe",
+                    "driverPhotoUrl": "https://s3.amazonaws.com/logistics-driver-account-production/static/drivers/photo/73961bc5-416a-4edd-8e4a-6cef885f43fe.png?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMP%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJIMEYCIQD3tuf910AiUTocwMkF7Wo8I7qDx%2B4%2F4is8g768aCS53wIhAN8%2ByxJiQoVkf%2FsEn%2FaoBBLRserpxWJZ3d7lp8E3CF7GKvgFCIv%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMNzM5NDY0NzUwNDAxIgzFIR1W7QxQZdSUkpIqzAWE54fk6dFu026Oa9pZtD6fuy%2BslG9e5XFreCtgvHuv470JxDXP5KayXWcRPZQDTNygf%2FolV3%2BaH9k4HlUEZzR4YTrbap3gybF%2F6wb%2BW0scEgMMeH0O9x681rnufMZ4ssAuNMfi2upUXYWeCmBNcSsULyzEjdbiCtF6zR81CMe6TwpQP1pjBIIg8Qp%2BBozKk%2BZZ8yw94L5Ld2jxEPQAAvhv4jzeWyO6S%2FOMa%2F9ptxdZGoZTHRKFKdy5%2F%2FvVeDkjXlcT0suN8DWLZ4zFRl6AGnCmiT98w91lEyBs%2FIARcLHHi9xt2O8mKtcQxoZaSNET%2B8LxRedVDs76s%2BrRFPEIiB2gAdjIdVHai3sk0FGD0GLkl52%2Bi5qt2rEpSf05LRsyALb%2B83H8p6OlMV7R03l2Py1I8NRvcatLSSLn%2Bj45YJBFPxcoBR%2FJ5grPiLFWoGZsHbfrdsvvvUkZhLxz%2FI9EAySHFqdBnTd49g2YTc32uuzKyk69PwPTpe6xVM%2FmLZwXs69wUFFEQfnxia7tqVBmZBFs0otSpOX0ltosixtO7uB79fZSVhEp999PnvXpazJ0l%2F%2Bhom7K8w%2BmbdePm1RAM2XEQiUzWuqI3h88miM3SL7Q3LcyZrhjUTtYYXyll3TwP1iGTZUf%2B4V8Wo3RVe6IYayUeID2G25uICB9tQC66gAQ0Ps1w0TC6UxTj7Iz%2Fxhm4XoQH5YyWvBkU1G3ZPTGH7tJmRkDvn3ne8BK1vfTtSMjAaDtpzfZ%2FlUOybG5rYArjUeUwFDXH4CtZLZwa6FS3gRVOi9gmfXeD0B2EaWT9dcAmb0I92%2BP6tNnCwzOlr4fwxjrlwF0HQgmSipJC6A4bdm1jpjRUB%2FQnpLB3bOzgKxumTQDBcIRsrW%2BMJDrDz9cLFaad421T9oWWZGCs9VyAIZQEbeot5k4aFq1IJ6zbsqIiKRI9Bfad7udbnB3cDCE5ovVBjqPARyJxhwgAH4M18Tf%2FXWB8vXnYKxvr7OEzBvm7E0kjOxEJnqZUkJG%2Bc0CEGOjdZwLeKvw0H8%2FPP%2FxEtNl2fexhPGpmglyyAtkNiTU9Uw12fnUylhUFdq8q7lD7nfk1qlD%2BmA8gJZ4zzweqMe3ItKBXogMdExrVhiRQmYoQWkvf%2FoHXScwVsoN0reHiDwIisep&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260910T194644Z&X-Amz-SignedHeaders=host&X-Amz-Expires=3600&X-Amz-Credential=ASIA2YK4IUVAZAHLS4BO%2F20260910%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=65396e462095c4bbc61becd6c5350d0c2d11b6ff305118ba0c80cb991cb21f03",
+                    "modal": "MOTORCYCLE",
+                    "isTrackable": false,
+                    "isSuperDriver": false
+                  }
+                },
+                {
+                  "value": "DELIVERY_ARRIVED_AT_ORIGIN",
+                  "timestamp": "2026-09-10T16:49:52-03:00"
+                },
+                {
+                  "value": "DELIVERY_GOING_TO_DESTINATION",
+                  "timestamp": "2026-09-10T16:53:15-03:00",
+                  "metadata": {
+                    "isTrackable": false,
+                    "isSuperDriver": false
+                  }
+                },
+                {
+                  "value": "DELIVERY_COLLECTED",
+                  "timestamp": "2026-09-10T16:53:15-03:00",
+                  "metadata": {
+                    "stopsToDelivery": 0
+                  }
+                },
+                {
+                  "value": "DELIVERY_NEAR_DESTINATION",
+                  "timestamp": "2026-09-10T16:53:23-03:00"
+                },
+                {
+                  "value": "DELIVERY_ARRIVED_AT_DESTINATION",
+                  "timestamp": "2026-09-10T16:57:37-03:00"
+                },
+                {
+                  "value": "DELIVERY_COMPLETED",
+                  "timestamp": "2026-09-10T17:00:07-03:00",
+                  "metadata": {
+                    "isSuperDriver": false
+                  }
+                }
+              ]
+            }
+          ],
+          "deliveryParameters": {
+            "logisticProvider": "IFOOD_LOGISTICS",
+            "deliveryProduct": "FULL_SERVICE_COMPLETE_AREA",
+            "code": "HIGH_DENSITY",
+            "schedulingType": "IMMEDIATE"
+          },
+          "source": {
+            "trigger": "ORDER",
+            "triggerId": "69b5f286-970c-4c02-9173-c2c2ce5a7499",
+            "requester": "CUSTOMER",
+            "requesterId": "eb16a09c-4e48-4070-af63-d399e359a6bd",
+            "reason": "ORDER"
+          }
+        }
+      ]
+    },
+    "merchant": {
+      "address": {
+        "city": "BRASILIA",
+        "country": "BR",
+        "neighborhood": "Asa sul",
+        "state": "DF",
+        "streetName": "CLS 107 Bloco E",
+        "streetNumber": "1",
+        "coordinates": {
+          "latitude": -15.814659,
+          "longitude": -47.903045
+        }
+      },
+      "id": "58c594fc-e72c-4e70-bf9c-9c6bf3f9f48b",
+      "name": "Xique Xique Carne de Sol - Asa Sul",
+      "logo": "58c594fc-e72c-4e70-bf9c-9c6bf3f9f48b/202607161257_XxzE_c.png",
+      "type": "RESTAURANT"
+    },
+    "payments": {
+      "methods": [
+        {
+          "id": "e33a2ebe-fccf-405b-8188-74fbcddf6162",
+          "uniqueId": "f7ac212a-9eff-44fe-bbb5-0561aec1fd52",
+          "method": {
+            "name": "DIGITAL_WALLET",
+            "description": "Carteira digital"
+          },
+          "type": {
+            "name": "ONLINE",
+            "description": "Pago pelo app"
+          },
+          "brand": {
+            "id": "ca34f400-9ba1-49c9-9f08-d269f97fd678",
+            "image": "ca34f400-9ba1-49c9-9f08-d269f97fd678.png",
+            "name": "MASTERCARD",
+            "description": "Mastercard"
+          },
+          "digitalWallet": {
+            "id": "973acff8-8be0-46e4-8e62-3a3fadbfda90",
+            "name": "APPLE_PAY",
+            "description": "Apple Pay",
+            "image": "973acff8-8be0-46e4-8e62-3a3fadbfda90.png"
+          },
+          "amount": {
+            "currency": "BRL",
+            "value": 6212
+          },
+          "transactions": []
+        }
+      ],
+      "total": {
+        "currency": "BRL",
+        "value": 6212
+      }
+    },
+    "bag": {
+      "benefits": [
+        {
+          "type": "ITEM_TAG",
+          "target": "ITEM",
+          "targetId": "$.bag.items[d8338730-e603-4649-80cc-bab93605cfc2]",
+          "description": "TAG::CART::FD_DESITEM_97F5F",
+          "value": 1000,
+          "experienceType": "HITS_ITEM_DISCOUNT"
+        },
+        {
+          "type": "ITEM_TAG",
+          "target": "DELIVERY_FEE",
+          "targetId": "$.bag.deliveryFee.value",
+          "description": "TAG::CART::FD_DESPENT_50F30",
+          "value": 700,
+          "experienceType": "ITEM_FREE_DELIVERY"
+        }
+      ],
+      "deliveryFee": {
+        "value": 700,
+        "valueWithDiscount": 0
+      },
+      "items": [
+        {
+          "id": "4cafd955-7c33-4f0d-89b3-ad99a0786ac4",
+          "uniqueId": "10ad333a-3454-40da-a2fd-29ff9fab8cb6",
+          "externalId": "4cafd955-7c33-4f0d-89b3-ad99a0786ac4",
+          "name": "Mini raiz Nordestina",
+          "description": "Raiz Nordestina - Novidade! Uma marmita completa, farta e cheia de sabor nordestino.\nAcompanha: arroz branco soltinho, carne de sol desfiada, macia e suculenta, feijão tropeiro tradicional com farofa de cuscuz e purê de mandioca cremoso.",
+          "quantity": 1,
+          "subItems": [],
+          "tags": [],
+          "totalPrice": 2490,
+          "totalPriceWithDiscount": 2490,
+          "unitPrice": 2490,
+          "unitPriceWithDiscount": 2490,
+          "notes": "",
+          "logoUrl": "58c594fc-e72c-4e70-bf9c-9c6bf3f9f48b/202602181438_NGI2_i.jpg",
+          "attachments": []
+        },
+        {
+          "id": "3779c1a6-2e74-4200-be2f-ba4e5db21eae",
+          "uniqueId": "d8338730-e603-4649-80cc-bab93605cfc2",
+          "externalId": "3779c1a6-2e74-4200-be2f-ba4e5db21eae",
+          "name": "Picadinho de carne-de-sol",
+          "description": "Tradicional prato da cidade agora feito com nossa especial carne de sol acompanhando arroz branco, farofa, banana a milanesa e ovo frito. (esse prato não permite alterações - prato para 01 pessoa)",
+          "quantity": 1,
+          "subItems": [],
+          "tags": [
+            "TAG::MAIS_VENDIDOS_V2",
+            "TAG::DEVLOG_COBERTURA",
+            "TAG::MAIS_VENDIDOS_V3",
+            "TAG::MAIS_VENDIDOS_V0",
+            "TAG::EXCLUSIVOS_ATE_50_OFF_JAN_2021",
+            "TAG::GARFIELD::ITEM_AVAILABILITY_V1",
+            "TAG::PRATO_EXECUTIVO_V1",
+            "TAG::CART::FD_DESITEM_97F5F",
+            "TAG::DESCONTO_ATE70_MARMITAS_MAR21",
+            "TAG::DEVLOG_TOP_ITEM_LUNCH_PRATOS",
+            "TAG::CART::FD_DESPENT_50F30",
+            "TAG::DESCONTO_ATE70_BRASILEIRA_MAR21",
+            "TAG::ABAIXO_DA_MEDIA_V3",
+            "TAG::ABAIXO_DA_MEDIA_V2"
+          ],
+          "totalPrice": 4600,
+          "totalPriceWithDiscount": 3600,
+          "unitPrice": 4600,
+          "unitPriceWithDiscount": 3600,
+          "notes": "",
+          "logoUrl": "b219cf6a-6f01-4f49-b479-c935a326f784/201909111141_Bn7O_p.jpg",
+          "attachments": []
+        }
+      ],
+      "subTotal": {
+        "value": 7090,
+        "valueWithDiscount": 6090
+      },
+      "total": {
+        "value": 7790,
+        "valueWithDiscount": 6212
+      },
+      "updated": false
+    },
+    "origin": {
+      "platform": "IOS",
+      "appName": "iFood",
+      "appVersion": "10.138.0"
+    },
+    "deliveryMethod": {
+      "id": "HIGH_DENSITY",
+      "mode": "DELIVERY",
+      "timeSlot": {
+        "id": "",
+        "startDateTime": "2026-09-10T16:58:38-03:00",
+        "endDateTime": "2026-09-10T17:13:38-03:00"
+      }
+    },
+    "fees": [
+      {
+        "id": "31c82e87-35c6-4c66-a066-be4652f73b40",
+        "title": "Taxa de Serviço",
+        "description": "A cobrança da taxa de serviço inclui o licenciamento de uso da Plataforma e contribui com custos operacionais, como desenvolvimento, atualização e suporte, além de viabilizar investimentos contínuos em segurança e inovação.",
+        "type": "UNKNOWN",
+        "amount": {
+          "currency": "BRL",
+          "value": 122
+        }
+      }
+    ],
+    "salesChannel": "IFOOD",
+    "verificationCodes": [
+      {
+        "source": "account-delivery-code",
+        "name": "DELIVERY_CODE",
+        "value": "0939",
+        "required": true
+      }
+    ]
+  },
+  {
     "id": "5af0482f-68eb-44a5-a4c4-c8f57c2ebd54",
     "shortId": "3051",
     "orderNumber": "3051",
@@ -1406,282 +1723,6 @@
         "amount": {
           "currency": "BRL",
           "value": 249
-        }
-      }
-    ],
-    "salesChannel": "IFOOD",
-    "verificationCodes": [
-      {
-        "source": "account-delivery-code",
-        "name": "DELIVERY_CODE",
-        "value": "0939",
-        "required": true
-      }
-    ]
-  },
-  {
-    "id": "e6df7a82-0a2c-43ba-9b39-8e19ae356e1b",
-    "shortId": "1342",
-    "orderNumber": "1342",
-    "createdAt": "2026-08-23T21:38:23-03:00",
-    "updatedAt": "2026-08-23T22:27:01-03:00",
-    "closedAt": "2026-08-23T22:27:01-03:00",
-    "lastStatus": "CONCLUDED",
-    "details": {
-      "mode": "DELIVERY",
-      "scheduled": false,
-      "tippable": false,
-      "indoorTipEnabled": false,
-      "trackable": false,
-      "boxable": false,
-      "placedAtBox": false,
-      "reviewed": false,
-      "darkKitchen": false
-    },
-    "delivery": {
-      "address": {
-        "establishment": "",
-        "city": "Brasília",
-        "country": "BR",
-        "neighborhood": "Asa Sul",
-        "state": "DF",
-        "streetName": "SHCS, SQS 410, BL M",
-        "streetNumber": "Sem número",
-        "coordinates": {
-          "latitude": -15.82544,
-          "longitude": -47.904975
-        },
-        "reference": "Primeira porta de vidro a direita (interfonar)",
-        "complement": "Apto 301D"
-      },
-      "driver": {
-        "name": "João Carlos",
-        "modal": "MOTORCYCLE",
-        "isSuperDriver": false
-      },
-      "estimatedTimeOfArrival": {
-        "deliversAt": "2026-08-23T22:12:23-03:00",
-        "updatedAt": "2026-08-23T22:27:01-03:00",
-        "deliversEndAt": "2026-08-23T22:22:23-03:00"
-      },
-      "expectedDeliveryTime": "2026-08-23T22:12:23-03:00",
-      "expectedDuration": 2040,
-      "expectedDeliveryTimeEnd": "2026-08-23T22:22:23-03:00",
-      "isFullService": true
-    },
-    "deliveryOperation": {
-      "executions": [
-        {
-          "deliveryRequestId": "eed84fad-2331-3bdc-87cf-f5fe6a439252",
-          "lastState": "COMPLETED",
-          "lastStateAt": "2026-08-23T22:27:01-03:00",
-          "timeline": [
-            {
-              "events": [
-                {
-                  "value": "DELIVERY_GOING_TO_ORIGIN",
-                  "timestamp": "2026-08-23T22:09:12-03:00",
-                  "metadata": {
-                    "isSuperDriver": false
-                  }
-                },
-                {
-                  "value": "DELIVERY_ACCEPTED",
-                  "timestamp": "2026-08-23T22:09:12-03:00",
-                  "metadata": {
-                    "driverName": "João Carlos",
-                    "modal": "MOTORCYCLE",
-                    "isTrackable": true,
-                    "isSuperDriver": false
-                  }
-                },
-                {
-                  "value": "DELIVERY_ARRIVED_AT_ORIGIN",
-                  "timestamp": "2026-08-23T22:20:19-03:00"
-                },
-                {
-                  "value": "DELIVERY_GOING_TO_DESTINATION",
-                  "timestamp": "2026-08-23T22:20:23-03:00",
-                  "metadata": {
-                    "isTrackable": true,
-                    "isSuperDriver": false
-                  }
-                },
-                {
-                  "value": "DELIVERY_ARRIVED_AT_DESTINATION",
-                  "timestamp": "2026-08-23T22:25:08-03:00"
-                }
-              ]
-            }
-          ],
-          "deliveryParameters": {
-            "logisticProvider": "MERCHANT",
-            "deliveryProduct": "SELF_DELIVERY",
-            "code": "DEFAULT",
-            "schedulingType": "IMMEDIATE"
-          },
-          "source": {
-            "trigger": "ORDER",
-            "triggerId": "e6df7a82-0a2c-43ba-9b39-8e19ae356e1b",
-            "requester": "CUSTOMER",
-            "requesterId": "eb16a09c-4e48-4070-af63-d399e359a6bd",
-            "reason": "ORDER"
-          }
-        }
-      ]
-    },
-    "merchant": {
-      "address": {
-        "city": "BRASILIA",
-        "country": "BR",
-        "neighborhood": "Asa Norte",
-        "state": "DF",
-        "streetName": "Quadra CLN 102 Bloco A",
-        "streetNumber": "0",
-        "coordinates": {
-          "latitude": -15.783294,
-          "longitude": -47.883045
-        }
-      },
-      "id": "36b133b4-fa58-40bc-930f-e2f799bb98e2",
-      "name": "Shakkai Sushi",
-      "logo": "36b133b4-fa58-40bc-930f-e2f799bb98e2/202608171919_XKff_p.jpg",
-      "type": "RESTAURANT"
-    },
-    "payments": {
-      "methods": [
-        {
-          "id": "e33a2ebe-fccf-405b-8188-74fbcddf6162",
-          "uniqueId": "a404f93f-c7c9-46f4-8382-70101a449011",
-          "method": {
-            "name": "DIGITAL_WALLET",
-            "description": "Carteira digital"
-          },
-          "type": {
-            "name": "ONLINE",
-            "description": "Pago pelo app"
-          },
-          "brand": {
-            "id": "ca34f400-9ba1-49c9-9f08-d269f97fd678",
-            "image": "ca34f400-9ba1-49c9-9f08-d269f97fd678.png",
-            "name": "MASTERCARD",
-            "description": "Mastercard"
-          },
-          "digitalWallet": {
-            "id": "973acff8-8be0-46e4-8e62-3a3fadbfda90",
-            "name": "APPLE_PAY",
-            "description": "Apple Pay",
-            "image": "973acff8-8be0-46e4-8e62-3a3fadbfda90.png"
-          },
-          "amount": {
-            "currency": "BRL",
-            "value": 9608
-          },
-          "transactions": []
-        }
-      ],
-      "total": {
-        "currency": "BRL",
-        "value": 9608
-      }
-    },
-    "bag": {
-      "benefits": [
-        {
-          "type": "VOUCHER",
-          "target": "CART",
-          "targetId": "$.bag.subTotal.value",
-          "description": "e36510c5-58f9-40f0-88e1-632e9dc4268f",
-          "value": 1000,
-          "experienceType": "CLUB_BUNDLE"
-        }
-      ],
-      "deliveryFee": {
-        "value": 0,
-        "valueWithDiscount": 0
-      },
-      "items": [
-        {
-          "id": "bb61f064-cc81-4565-8a52-5654b4649048",
-          "uniqueId": "32f470b7-fec6-4cd0-b31c-af2ff9d55075",
-          "externalId": "bb61f064-cc81-4565-8a52-5654b4649048",
-          "name": "Yakissoba Misto - 500g",
-          "description": "Delicioso tradicional macarrao japones, com carne e frango, legumes salteados, temperados com molho a base de shoyu.",
-          "quantity": 1,
-          "subItems": [],
-          "tags": [
-            "TAG::MUITO_FAVORITADO_V0",
-            "TAG::MAIS_VENDIDOS_V0",
-            "TAG::ABAIXO_DA_MEDIA_V3",
-            "TAG::DEVLOG_COBERTURA",
-            "TAG::MAIS_VENDIDOS_V3",
-            "TAG::TRENDING_TOP_10_DEVLOG",
-            "TAG::GARFIELD::ITEM_AVAILABILITY_V1",
-            "TAG::PRATO_EXECUTIVO_V1"
-          ],
-          "totalPrice": 4600,
-          "totalPriceWithDiscount": 4600,
-          "unitPrice": 4600,
-          "unitPriceWithDiscount": 4600,
-          "notes": "Não enviar descartáveis para este pedido",
-          "logoUrl": "36b133b4-fa58-40bc-930f-e2f799bb98e2/202104121305_ABOY_.jpeg",
-          "attachments": []
-        },
-        {
-          "id": "c97a82cc-3e20-46f7-b22f-347c9a883645",
-          "uniqueId": "e7a4dfd5-fc3d-42dd-a478-e2b151eb651d",
-          "externalId": "c97a82cc-3e20-46f7-b22f-347c9a883645",
-          "name": "Yakissoba de Camarão - 500g",
-          "description": "Delicioso tradicional macarrao japones, com camarão,  legumes salteados, temperados com molho a base de shoyu.",
-          "quantity": 1,
-          "subItems": [],
-          "tags": [
-            "TAG::DEVLOG_COBERTURA",
-            "TAG::GARFIELD::ITEM_AVAILABILITY_V1",
-            "TAG::PRATO_EXECUTIVO_V1"
-          ],
-          "totalPrice": 5800,
-          "totalPriceWithDiscount": 5800,
-          "unitPrice": 5800,
-          "unitPriceWithDiscount": 5800,
-          "notes": "",
-          "logoUrl": "36b133b4-fa58-40bc-930f-e2f799bb98e2/202104121303_J5fm_.jpeg",
-          "attachments": []
-        }
-      ],
-      "subTotal": {
-        "value": 10400,
-        "valueWithDiscount": 10400
-      },
-      "total": {
-        "value": 10400,
-        "valueWithDiscount": 9608
-      },
-      "updated": false
-    },
-    "origin": {
-      "platform": "IOS",
-      "appName": "iFood",
-      "appVersion": "10.135.0"
-    },
-    "deliveryMethod": {
-      "id": "DEFAULT",
-      "mode": "DELIVERY",
-      "timeSlot": {
-        "id": "",
-        "startDateTime": "2026-08-23T22:12:23-03:00",
-        "endDateTime": "2026-08-23T22:22:23-03:00"
-      }
-    },
-    "fees": [
-      {
-        "id": "f98d1886-386d-431a-ab35-5212ed284181",
-        "title": "Taxa de serviço",
-        "description": "A cobrança da taxa de serviço inclui o licenciamento de uso da Plataforma e contribui com custos operacionais, como desenvolvimento, atualização e suporte, além de viabilizar investimentos contínuos em segurança e inovação.",
-        "type": "UNKNOWN",
-        "amount": {
-          "currency": "BRL",
-          "value": 208
         }
       }
     ],
